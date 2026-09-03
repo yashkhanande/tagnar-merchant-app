@@ -1,0 +1,91 @@
+{
+  "project_info": {
+    "project_number": "316349124552",
+    "firebase_url": "https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "arcloudanchor-12fd3",
+    "storage_bucket": "arcloudanchor-12fd3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:316349124552:android:1545991c4e2329157dfafd",
+        "android_client_info": {
+          "package_name": "com.UnityTechnologies.com.unity.template.urpblank"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "316349124552-jrscs3d2kgdevob5e91al3oi0sv1lqgt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkmMTAEI_PF1vmuXtepmYzydP_jyM45jw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "316349124552-jrscs3d2kgdevob5e91al3oi0sv1lqgt.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "316349124552-bblmnada0okabi212ulv2jt4euhm2mti.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.tagnarMerchant"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:316349124552:android:e7ac07fee47175947dfafd",
+        "android_client_info": {
+          "package_name": "com.example.tagnar_merchant"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "316349124552-lrlsnf27hjglfqbqq1ful5oe42qdd1dt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tagnar_merchant",
+            "certificate_hash": "830459349fad110818641a0523535259c2f1cd77"
+          }
+        },
+        {
+          "client_id": "316349124552-jrscs3d2kgdevob5e91al3oi0sv1lqgt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkmMTAEI_PF1vmuXtepmYzydP_jyM45jw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "316349124552-jrscs3d2kgdevob5e91al3oi0sv1lqgt.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "316349124552-bblmnada0okabi212ulv2jt4euhm2mti.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.tagnarMerchant"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
