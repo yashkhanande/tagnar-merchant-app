@@ -1,138 +1,177 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'package:tagnar_merchant/controller/auth_controller.dart';
 import 'package:tagnar_merchant/controller/home_controller.dart';
-import 'package:tagnar_merchant/pages/profile_page.dart';
-import 'package:tagnar_merchant/pages/widgets/complete_profile_card.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+import '../models/merchant_dashboard.dart';
+import 'profile_page.dart';
+import 'widgets/dashboard.dart';
+import 'widgets/dashboard_card.dart';
+import 'widgets/dashboard_theme.dart';
+import 'widgets/onboarding.dart';
 
-  @override
-  Widget build(BuildContext context) {
-    final authController = Get.find<AuthController>();
-    final homeController = Get.find<HomeController>();
+class HomePage extends GetView<HomeController> {
+  final DashboardLoader? loadDashboard;
+  final Future<void> Function()? onEditBusiness;
+  final VoidCallback? onViewAllPayments;
+  final ValueChanged<DashboardPayment>? onPaymentTap;
 
-    final theme = Theme.of(context);
-    final user = authController.user.value;
-
-    Future<void> openProfile() async {
-      await Get.to(() => const ProfilePage());
-
-      if (user != null) {
-        await homeController.loadMerchantProfile(user.uid);
-      }
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Home',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: theme.colorScheme.onSurface,
-        actions: [
-          IconButton(
-            tooltip: 'Sign out',
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: authController.signOut,
-          ),
-        ],
-      ),
-
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome section
-              _WelcomeSection(
-                displayName: user?.displayName ?? 'User',
-                onTap: openProfile,
-              ),
-
-              const SizedBox(height: 24),
-
-              // Complete profile section
-              Obx(() {
-                final isIncomplete = homeController.isProfileIncomplete.value;
-
-                if (!isIncomplete) {
-                  return const SizedBox.shrink();
-                }
-
-                return CompleteProfileCard(
-                  missingFields: homeController.missingFields,
-                  onCompleteProfile: openProfile,
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WelcomeSection extends StatelessWidget {
-  final String displayName;
-  final VoidCallback onTap;
-
-  const _WelcomeSection({required this.displayName, required this.onTap});
+  const HomePage({
+    super.key,
+    this.loadDashboard,
+    this.onEditBusiness,
+    this.onViewAllPayments,
+    this.onPaymentTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: theme.colorScheme.primary.withOpacity(0.12),
-              child: Icon(
-                Icons.storefront_rounded,
-                color: theme.colorScheme.primary,
-                size: 28,
-              ),
+    return Theme(
+      data: DashboardTheme.data,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Dashboard',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Profile',
+              onPressed: () => Get.to<void>(() => const ProfilePage()),
+              icon: const Icon(Icons.account_circle_outlined),
             ),
+            Obx(() {
+              final refreshing = controller.isRefreshing.value;
+              final signedIn = controller.authController.user.value != null;
 
-            const SizedBox(width: 14),
+              return IconButton(
+                tooltip: 'Refresh dashboard',
+                onPressed: refreshing || !signedIn
+                    ? null
+                    : controller.refreshDashboard,
+                icon: refreshing
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded),
+              );
+            }),
+            Obx(() {
+              final signingOut = controller.isSigningOut.value;
+              final signedIn = controller.authController.user.value != null;
 
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back,',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  Text(
-                    displayName,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-
-            Icon(
-              Icons.chevron_right_rounded,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+              return IconButton(
+                tooltip: 'Sign out',
+                onPressed: signingOut || !signedIn ? null : controller.signOut,
+                icon: signingOut
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.logout_rounded),
+              );
+            }),
+            const SizedBox(width: 8),
           ],
+        ),
+        body: SafeArea(
+          child: Obx(() {
+            final user = controller.authController.user.value;
+
+            if (user == null) {
+              return const Center(
+                child: Text('Sign in to view your dashboard.'),
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: controller.refreshDashboard,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1100),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Obx(() {
+                          final incomplete =
+                              controller.isProfileIncomplete.value;
+                          final fields = controller.missingFields.toList();
+                          final loading = controller.isLoading.value;
+                          final error = controller.profileError.value;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Onboarding(
+                                displayName: controller.displayName,
+                                missingFields: incomplete
+                                    ? fields
+                                    : const <String>[],
+                                editing: controller.isEditing.value,
+                                onEdit: () => controller.editBusiness(
+                                  openEditor: onEditBusiness,
+                                ),
+                              ),
+                              if (loading)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 16),
+                                  child: LinearProgressIndicator(
+                                    semanticsLabel: 'Loading business profile',
+                                  ),
+                                ),
+                              if (error != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16),
+                                  child: DashboardCard(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Semantics(
+                                          liveRegion: true,
+                                          child: Text(error),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextButton.icon(
+                                          onPressed: loading
+                                              ? null
+                                              : () => controller
+                                                    .loadMerchantProfile(
+                                                      user.uid,
+                                                    ),
+                                          icon: const Icon(
+                                            Icons.refresh_rounded,
+                                          ),
+                                          label: const Text('Try again'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        }),
+                        const SizedBox(height: 28),
+                        Dashboard(
+                          key: controller.dashboardKey,
+                          merchantId: user.uid,
+                          loader: loadDashboard,
+                          onViewAllPayments: onViewAllPayments,
+                          onPaymentTap: onPaymentTap,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
         ),
       ),
     );

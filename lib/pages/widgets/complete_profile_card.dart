@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class CompleteProfileCard extends StatelessWidget {
@@ -17,24 +16,26 @@ class CompleteProfileCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final theme = Theme.of(context);
+    const cardStart = Color(0xFF142D50);
+    const cardEnd = Color(0xFF0B192E);
+    const borderColor = Color(0xFF294B73);
+    const iconBackground = Color(0xFF203F65);
+    const accentColor = Color(0xFF93C5FD);
+    const secondaryText = Color(0xFFCBD5E1);
+    const chipBackground = Color(0xFF193553);
+    const buttonColor = Color(0xFF1D4ED8);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.orange.withOpacity(0.14),
-            Colors.orange.withOpacity(0.05),
-          ],
+          colors: [cardStart, cardEnd],
         ),
-        border: Border.all(
-          color: Colors.orange.withOpacity(0.3),
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,12 +45,12 @@ class CompleteProfileCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.18),
+                  color: iconBackground,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.storefront_outlined,
-                  color: Colors.deepOrange,
+                  color: accentColor,
                   size: 20,
                 ),
               ),
@@ -58,6 +59,7 @@ class CompleteProfileCard extends StatelessWidget {
                 child: Text(
                   'Complete your business profile',
                   style: TextStyle(
+                    color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -65,20 +67,18 @@ class CompleteProfileCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 10),
-
           Text(
             '${missingFields.length} '
             '${missingFields.length == 1 ? 'detail is' : 'details are'} '
             'still missing.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            style: const TextStyle(
+              color: secondaryText,
+              fontSize: 14,
+              height: 1.4,
             ),
           ),
-
           const SizedBox(height: 14),
-
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -87,40 +87,41 @@ class CompleteProfileCard extends StatelessWidget {
                   (field) => Chip(
                     label: Text(
                       field,
-                      style: const TextStyle(fontSize: 12),
+                      style: const TextStyle(
+                        color: secondaryText,
+                        fontSize: 12,
+                      ),
                     ),
-                    backgroundColor: Colors.white,
-                    side: BorderSide(
-                      color: Colors.orange.withOpacity(0.4),
-                    ),
+                    backgroundColor: chipBackground,
+                    side: const BorderSide(color: borderColor),
                     visualDensity: VisualDensity.compact,
-                    materialTapTargetSize:
-                        MaterialTapTargetSize.shrinkWrap,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 )
                 .toList(),
           ),
-
           const SizedBox(height: 16),
-
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
+                backgroundColor: buttonColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
                 elevation: 0,
               ),
               onPressed: onCompleteProfile,
-              icon: const Icon(
-                Icons.edit_outlined,
-                size: 18,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text(
+                'Complete Profile',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
-              label: const Text('Complete Profile'),
             ),
           ),
         ],
