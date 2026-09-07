@@ -44,16 +44,12 @@ class Onboarding extends StatelessWidget {
                       children: [
                         const Text(
                           'Welcome back,',
-                          style: TextStyle(
-                            color: DashboardTheme.secondary,
-                          ),
+                          style: TextStyle(color: DashboardTheme.secondary),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           displayName,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
+                          style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -65,9 +61,7 @@ class Onboarding extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: editing ? null : onEdit,
                 icon: const Icon(Icons.edit_outlined, size: 18),
-                label: Text(
-                  editing ? 'Opening...' : 'Edit business details',
-                ),
+                label: Text(editing ? 'Opening...' : 'Edit business details'),
               ),
             ],
           ),

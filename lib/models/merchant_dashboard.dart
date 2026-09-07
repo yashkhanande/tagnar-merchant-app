@@ -8,12 +8,7 @@ enum DashboardPeriod {
   final String label;
 }
 
-enum PaymentStatus {
-  received,
-  pending,
-  failed,
-  refunded,
-}
+enum PaymentStatus { received, pending, failed, refunded }
 
 class DashboardPayment {
   final String id;
@@ -51,7 +46,8 @@ class MerchantDashboard {
   }) : payments = List.unmodifiable(payments);
 }
 
-typedef DashboardLoader = Future<MerchantDashboard> Function(
-  String merchantId,
-  DashboardPeriod period,
-);
+typedef DashboardLoader =
+    Future<MerchantDashboard> Function(
+      String merchantId,
+      DashboardPeriod period,
+    );

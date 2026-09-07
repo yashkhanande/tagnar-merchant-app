@@ -7,10 +7,7 @@ class OnboardingService {
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
 
-  OnboardingService({
-    required this.firestore,
-    required this.auth,
-  });
+  OnboardingService({required this.firestore, required this.auth});
 
   DocumentReference<Map<String, dynamic>> _document(String uid) {
     if (auth.currentUser?.uid != uid) {
@@ -31,9 +28,6 @@ class OnboardingService {
   }
 
   Future<void> save(String uid, OnboardingDetails details) async {
-    await _document(uid).set(
-      details.toMap(),
-      SetOptions(merge: true),
-    );
+    await _document(uid).set(details.toMap(), SetOptions(merge: true));
   }
 }

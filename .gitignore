@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local Firebase tooling and test outputs
+backend/node_modules/
+*-debug.log*
+*.token

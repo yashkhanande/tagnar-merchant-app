@@ -1,16 +1,117 @@
-# tagnar_merchant
+# Tagnar Merchant
 
-A new Flutter project.
+Stage 1 is a working Flutter demo for Android. It opens straight into a sample
+merchant shop and needs no Firebase account, SMS service, or payment credentials.
 
-## Getting Started
+## Run it from Android Studio
 
-This project is a starting point for a Flutter application.
+1. Open this folder, `tagnar_merchant`, in Android Studio.
+2. Make sure the Flutter and Dart plugins are installed. Set the Flutter SDK path
+   to your Flutter installation (on this computer it is
+   `/Users/yashkhanande/development/flutter`).
+3. Open **Tools > Device Manager** and start an Android emulator. Alternatively,
+   connect an Android phone with Developer options and USB debugging enabled.
+4. Open the terminal at the bottom of Android Studio and run:
 
-A few resources to get you started if this is your first Flutter project:
+   ```sh
+   flutter pub get
+   flutter devices
+   flutter run -d emulator-5554
+   ```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+   Replace `emulator-5554` with the Android device ID shown by `flutter devices`.
+   The entry file is `lib/main.dart`. You can also select that file and press Run.
+5. In a terminal run, press `r` after saving Dart code to hot reload; press `q` to
+   stop. Use a full restart when changing dependencies or native Android files.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+If Flutter is not found, add your Flutter `bin` folder to your PATH and reopen the
+terminal. Run `flutter doctor -v` for installation diagnostics. If it reports
+unaccepted Android licenses, run `flutter doctor --android-licenses` and review
+the prompts. No external console setup is needed for the demo.
+
+## Check the demo
+
+- **Dashboard:** shows the linked shop, payment totals, pending requests, active
+  offers, sample interactions, and recent payments. Tap a metric or the analytics
+  button to explore further.
+- **Requests:** search a brand, product, category, or request ID. Combine type and
+  status filters. Tap a request for details. The Offer inbox is below the list.
+- **Offers:** use **Review incoming offer** on Dashboard or **Review offer** in
+  Requests. Tap **Accept** or **Decline**. The response is saved locally and the
+  buttons disappear. Restart the app and use **View response** to check it stayed
+  saved. **Later** closes the popup without answering. Demo acceptance makes the
+  offer active but does not create a payment.
+- **Payments:** choose dates and a status, then open a transaction. The headline
+  sums Received records within the selected dates; a status filter only changes
+  the list. There is no payment collection or status-changing action.
+- **Analytics:** open **View interaction analytics** on Dashboard. Try Today,
+  7 days, 30 days, All time, and Custom. Counts are sample events, not unique
+  people, revenue attribution, or actual tracked activity.
+- **Chats:** filter Brands, Masters, or Users; open a conversation to clear its
+  unread count. Type a message and press Send. Messages are marked Local, retained
+  after restarting, and never delivered to another person.
+- **Profile:** shows the single fixed shop/anchor. Open **Confirm phone number**,
+  enter a number including `+` and country code, and tap **Get demo code**. Enter
+  `123456` and tap **Confirm demo code**. Try an incorrect code first to see the
+  error. Codes expire after five minutes. No SMS is sent; this is not real
+  authentication or proof that you own the number.
+- **State previews:** tap the sliders icon (**Demo tools**) at the top. Preview
+  empty data or an error; **Try again** or **Normal demo / reload** restores the
+  normal view. Reload shows the loading state. These previews do not erase data.
+
+Demo fixtures are dated relative to the first launch and keep those dates on
+later launches, so offer expiry is stable. To start the demo completely fresh,
+use Android Settings > Apps > tagnar_merchant > Storage > Clear storage (this
+removes this app's local demo decisions, messages, and phone confirmation).
+
+## Project layout
+
+```text
+lib/main.dart                    Credential-free demo entry point
+lib/main_firebase.dart           Preserved previous Firebase entry point
+lib/core/models.dart             Typed immutable display data
+lib/core/merchant_repository.dart Backend replacement boundary
+lib/core/data/                   Demo fixtures, repository, local storage
+lib/features/shell/              Navigation and GetX controller
+lib/features/dashboard/          Dashboard and date-filtered analytics
+lib/features/requests/           Request list, details, offer popup
+lib/features/payments/           Read-only transaction records
+lib/features/chats/              Conversation list and local messaging
+lib/features/profile/            Single anchor profile and demo OTP
+lib/shared/widgets/              Reusable UI and date/status filters
+lib/pages/widgets/               Existing dashboard theme/card reused
+lib/controller/, lib/services/   Preserved existing Firebase architecture
+```
+
+The only added dependency is `shared_preferences` 2.5.3, for device-local demo
+storage. Its [official documentation](https://pub.dev/packages/shared_preferences)
+explains that it is simple preference storage; it must not be used as the
+production authority for offer decisions, authentication, or payments. Repository
+writes are serialized and checked before updating the demo UI. Tests substitute
+an in-memory store and do not need native plugins or Firebase.
+
+The old Firebase flow is preserved in `lib/main_firebase.dart`; it is **not** the
+completed stages 2–5. Its Google sign-in/onboarding behavior and existing Firebase
+project are outside stage 1 verification. The default entry point does not
+initialize Firebase or call those services. Android's Google services Gradle
+plugin is applied only when `android/app/google-services.json` exists, so demo
+builds also work without that file.
+
+## Repeat the checks
+
+```sh
+dart format lib test
+flutter analyze
+flutter test
+flutter build apk --debug
+```
+
+The Android APK is written to `build/app/outputs/flutter-apk/app-debug.apk`.
+Do not use this debug build as a production release.
+
+See [the staged plan and assumptions](docs/IMPLEMENTATION_PLAN.md) for the
+remaining stages and questions about request direction, role permissions, and
+backend security. Stage 2 will reuse Firebase Auth/Firestore and document the
+console steps for real phone authentication and one-anchor assignment. Stages
+3–5 will enforce merchant isolation, atomic offer responses, chat membership,
+server notifications, authoritative received-payment records, and real analytics.

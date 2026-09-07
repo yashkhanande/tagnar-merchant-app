@@ -7,10 +7,7 @@ import 'dashboard_theme.dart';
 class DashboardMetrics extends StatelessWidget {
   final MerchantDashboard data;
 
-  const DashboardMetrics({
-    super.key,
-    required this.data,
-  });
+  const DashboardMetrics({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +24,9 @@ class DashboardMetrics extends StatelessWidget {
       ),
       _Metric(
         title: 'Completed orders',
-        value: MaterialLocalizations.of(context)
-            .formatDecimal(data.completedOrders),
+        value: MaterialLocalizations.of(
+          context,
+        ).formatDecimal(data.completedOrders),
         icon: Icons.shopping_bag_outlined,
       ),
       _Metric(
@@ -40,19 +38,17 @@ class DashboardMetrics extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final largeText =
-            MediaQuery.textScalerOf(context).scale(14) > 20;
+        final largeText = MediaQuery.textScalerOf(context).scale(14) > 20;
 
         final columns = largeText
             ? 1
             : constraints.maxWidth >= 900
-                ? 4
-                : constraints.maxWidth >= 480
-                    ? 2
-                    : 1;
+            ? 4
+            : constraints.maxWidth >= 480
+            ? 2
+            : 1;
 
-        final width =
-            (constraints.maxWidth - (columns - 1) * 12) / columns;
+        final width = (constraints.maxWidth - (columns - 1) * 12) / columns;
 
         return Wrap(
           spacing: 12,
@@ -71,11 +67,7 @@ class _Metric extends StatelessWidget {
   final String value;
   final IconData icon;
 
-  const _Metric({
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
+  const _Metric({required this.title, required this.value, required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -85,17 +77,11 @@ class _Metric extends StatelessWidget {
         children: [
           Icon(icon, color: DashboardTheme.accent),
           const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(color: DashboardTheme.secondary),
-          ),
+          Text(title, style: const TextStyle(color: DashboardTheme.secondary)),
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
         ],
       ),

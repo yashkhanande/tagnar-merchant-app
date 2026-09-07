@@ -46,7 +46,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '316349124552',
     projectId: 'arcloudanchor-12fd3',
     authDomain: 'arcloudanchor-12fd3.firebaseapp.com',
-    databaseURL: 'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'arcloudanchor-12fd3.firebasestorage.app',
     measurementId: 'G-4LZTZQ2PTP',
   );
@@ -56,7 +57,8 @@ class DefaultFirebaseOptions {
     appId: '1:316349124552:android:e7ac07fee47175947dfafd',
     messagingSenderId: '316349124552',
     projectId: 'arcloudanchor-12fd3',
-    databaseURL: 'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'arcloudanchor-12fd3.firebasestorage.app',
   );
 
@@ -65,7 +67,8 @@ class DefaultFirebaseOptions {
     appId: '1:316349124552:ios:d50537efefb0cec37dfafd',
     messagingSenderId: '316349124552',
     projectId: 'arcloudanchor-12fd3',
-    databaseURL: 'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'arcloudanchor-12fd3.firebasestorage.app',
     iosBundleId: 'com.example.tagnarMerchant',
   );
@@ -75,7 +78,8 @@ class DefaultFirebaseOptions {
     appId: '1:316349124552:ios:d50537efefb0cec37dfafd',
     messagingSenderId: '316349124552',
     projectId: 'arcloudanchor-12fd3',
-    databaseURL: 'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'arcloudanchor-12fd3.firebasestorage.app',
     iosBundleId: 'com.example.tagnarMerchant',
   );
@@ -86,7 +90,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '316349124552',
     projectId: 'arcloudanchor-12fd3',
     authDomain: 'arcloudanchor-12fd3.firebaseapp.com',
-    databaseURL: 'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL:
+        'https://arcloudanchor-12fd3-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'arcloudanchor-12fd3.firebasestorage.app',
     measurementId: 'G-73NY4MVDFE',
   );

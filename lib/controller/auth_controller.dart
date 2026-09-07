@@ -1,5 +1,3 @@
-
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:tagnar_merchant/services/auth_service.dart';
@@ -50,52 +48,50 @@ class AuthController extends GetxController {
   }
 
   Future<void> deleteAccount() async {
-  if (isLoading.value) return;
+    if (isLoading.value) return;
 
-  try {
-    isLoading.value = true;
+    try {
+      isLoading.value = true;
 
-    await _authService.deleteAccount();
+      await _authService.deleteAccount();
 
-    // Don't show snackbar here.
-    // Firebase authStateChanges() will already emit null after deletion.
-    // Your auth/root routing should handle moving to the login page.
+      // Don't show snackbar here.
+      // Firebase authStateChanges() will already emit null after deletion.
+      // Your auth/root routing should handle moving to the login page.
+    } on FirebaseAuthException catch (e) {
+      String message;
 
-  } on FirebaseAuthException catch (e) {
-    String message;
+      switch (e.code) {
+        case 'requires-recent-login':
+          message =
+              'For security, please sign in again before deleting your account.';
+          break;
 
-    switch (e.code) {
-      case 'requires-recent-login':
-        message =
-            'For security, please sign in again before deleting your account.';
-        break;
+        case 'network-request-failed':
+          message = 'Please check your internet connection and try again.';
+          break;
 
-      case 'network-request-failed':
-        message =
-            'Please check your internet connection and try again.';
-        break;
+        default:
+          message = e.message ?? 'Unable to delete your account.';
+      }
 
-      default:
-        message = e.message ?? 'Unable to delete your account.';
+      if (Get.context != null) {
+        Get.snackbar(
+          'Delete Account Failed',
+          message,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      if (Get.context != null) {
+        Get.snackbar(
+          'Delete Account Failed',
+          'Something went wrong. Please try again.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } finally {
+      isLoading.value = false;
     }
-
-    if (Get.context != null) {
-      Get.snackbar(
-        'Delete Account Failed',
-        message,
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  } catch (e) {
-    if (Get.context != null) {
-      Get.snackbar(
-        'Delete Account Failed',
-        'Something went wrong. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  } finally {
-    isLoading.value = false;
   }
-}
 }

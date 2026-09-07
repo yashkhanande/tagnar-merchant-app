@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function googleAndPhone() {
+      return signedIn()
+        && request.auth.token.firebase.identities.keys().hasAny(['google.com'])
+        && request.auth.token.phone_number is string
+        && request.auth.token.phone_number.size() > 0;
+    }
+    function master() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/master_access/$(request.auth.uid))
+        && get(/databases/$(database)/documents/master_access/$(request.auth.uid)).data.active == true;
+    }
+    function eligibleMerchant(uid) {
+      return exists(/databases/$(database)/documents/merchants_new/$(uid))
+        && get(/databases/$(database)/documents/merchants_new/$(uid)).data.phoneNumber is string
+        && get(/databases/$(database)/documents/merchants_new/$(uid)).data.phoneNumber.size() > 0
+        && get(/databases/$(database)/documents/merchants_new/$(uid)).data.get('suspended', false) == false;
+    }
+    function ownMerchant(uid) {
+      return googleAndPhone() && request.auth.uid == uid && eligibleMerchant(uid);
+    }
+    function validProfile(uid) {
+      let d = request.resource.data;
+      return d.uid == uid && d.name is string && d.name.size() > 0 && d.name.size() <= 200
+        && d.email == request.auth.token.email && d.phoneNumber == request.auth.token.phone_number
+        && d.updatedAt == request.time;
+    }
+    match /master_access/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      // Only a trusted project administrator/Admin SDK can grant/revoke Masters.
+      allow list, create, update, delete: if false;
+    }
+    match /merchants_new/{uid} {
+      allow get: if master() || (googleAndPhone() && request.auth.uid == uid);
+      allow list: if master();
+      allow create: if googleAndPhone() && request.auth.uid == uid && validProfile(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'phoneNumber', 'createdAt', 'updatedAt'])
+        && request.resource.data.createdAt == request.time;
+      allow update: if ownMerchant(uid) && validProfile(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'phoneNumber', 'updatedAt']);
+      allow delete: if false;
+    }
+    match /merchant_shops/{shopId} {
+      allow read: if master() || ownMerchant(resource.data.merchantId);
+      allow create: if master()
+        && request.resource.data.keys().hasOnly(['merchantId', 'name', 'address', 'status', 'anchorId', 'approvedBy', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 100
+        && request.resource.data.address is string && request.resource.data.address.size() >= 5 && request.resource.data.address.size() <= 300
+        && request.resource.data.merchantId is string && eligibleMerchant(request.resource.data.merchantId)
+        && request.resource.data.status == 'approved'
+        && request.resource.data.anchorId is string && request.resource.data.anchorId.size() > 0
+        && request.resource.data.approvedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/merchant_anchors/$(request.resource.data.anchorId)).data.shopId == shopId
+        && getAfter(/databases/$(database)/documents/merchant_anchors/$(request.resource.data.anchorId)).data.merchantId == request.resource.data.merchantId
+        && getAfter(/databases/$(database)/documents/merchant_anchors/$(request.resource.data.anchorId)).data.approvedBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/merchant_anchors/$(request.resource.data.anchorId)).data.active == true;
+      // Initial approvals only. Transfers/deletions need a separately agreed flow.
+      allow update, delete: if false;
+    }
+    match /merchant_anchors/{anchorId} {
+      allow get: if master() || (ownMerchant(resource.data.merchantId)
+        && resource.data.active == true
+        && get(/databases/$(database)/documents/merchant_shops/$(resource.data.shopId)).data.merchantId == request.auth.uid
+        && get(/databases/$(database)/documents/merchant_shops/$(resource.data.shopId)).data.status == 'approved'
+        && get(/databases/$(database)/documents/merchant_shops/$(resource.data.shopId)).data.anchorId == anchorId);
+      allow list: if master();
+      allow create: if master()
+        && request.resource.data.keys().hasOnly(['shopId', 'merchantId', 'approvedBy', 'active', 'createdAt'])
+        && request.resource.data.shopId is string && request.resource.data.shopId.size() > 0
+        && request.resource.data.merchantId is string && eligibleMerchant(request.resource.data.merchantId)
+        && request.resource.data.active == true && request.resource.data.approvedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/merchant_shops/$(request.resource.data.shopId)).data.anchorId == anchorId
+        && getAfter(/databases/$(database)/documents/merchant_shops/$(request.resource.data.shopId)).data.merchantId == request.resource.data.merchantId
+        && getAfter(/databases/$(database)/documents/merchant_shops/$(request.resource.data.shopId)).data.status == 'approved'
+        && getAfter(/databases/$(database)/documents/merchant_shops/$(request.resource.data.shopId)).data.approvedBy == request.auth.uid;
+      allow update, delete: if false;
+    }
+    // Stages 3–5 grant scoped access after their business rules are agreed.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

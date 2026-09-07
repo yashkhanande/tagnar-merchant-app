@@ -522,7 +522,7 @@ class LoginPage extends StatelessWidget {
                 ),
                 child: Image.asset(
                   "assets/images/google.png",
-                  errorBuilder: (_, __, ___) {
+                  errorBuilder: (_, _, _) {
                     return const Icon(
                       Icons.g_mobiledata_rounded,
                       color: Colors.red,

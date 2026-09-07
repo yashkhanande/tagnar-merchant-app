@@ -1,0 +1,3 @@
+{
+  "firestore": [{"database": "tagnar-merchant", "rules": "firestore.merchant.rules"}]
+}

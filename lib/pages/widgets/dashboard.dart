@@ -89,9 +89,9 @@ class DashboardState extends State<Dashboard> {
       children: [
         Text(
           'Performance overview',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         const Text(
@@ -118,9 +118,7 @@ class DashboardState extends State<Dashboard> {
         if (_loading)
           const Padding(
             padding: EdgeInsets.only(bottom: 20),
-            child: LinearProgressIndicator(
-              semanticsLabel: 'Loading dashboard',
-            ),
+            child: LinearProgressIndicator(semanticsLabel: 'Loading dashboard'),
           ),
         if (_error != null)
           Padding(
@@ -129,10 +127,7 @@ class DashboardState extends State<Dashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(_error!),
-                  ),
+                  Semantics(liveRegion: true, child: Text(_error!)),
                   TextButton.icon(
                     onPressed: _loading ? null : () => refresh(),
                     icon: const Icon(Icons.refresh),
@@ -156,11 +151,7 @@ class DashboardState extends State<Dashboard> {
             'Updated '
             '${localizations.formatMediumDate(data.updatedAt.toLocal())}'
             ' · '
-            '${localizations.formatTimeOfDay(
-              TimeOfDay.fromDateTime(data.updatedAt.toLocal()),
-              alwaysUse24HourFormat:
-                  MediaQuery.of(context).alwaysUse24HourFormat,
-            )}',
+            '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(data.updatedAt.toLocal()), alwaysUse24HourFormat: MediaQuery.of(context).alwaysUse24HourFormat)}',
             style: const TextStyle(
               color: DashboardTheme.secondary,
               fontSize: 12,

@@ -14,14 +14,10 @@ class AuthWrapper extends StatelessWidget {
 
     Get.put(AuthController());
 
-Get.lazyPut<MerchantService>(
-  () => MerchantService(),
-);
+    Get.lazyPut<MerchantService>(() => MerchantService());
 
-Get.lazyPut<HomeController>(
-  () => HomeController(),
-);
-    
+    Get.lazyPut<HomeController>(() => HomeController());
+
     return Obx(() {
       if (controller.user.value != null) {
         return HomePage();

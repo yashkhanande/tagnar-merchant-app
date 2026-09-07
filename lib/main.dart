@@ -1,28 +1,28 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
-import 'package:tagnar_merchant/firebase_options.dart';
+import 'package:get/get.dart';
 
-import 'pages/auth/auth_wrapper.dart';
+import 'core/data/demo_merchant_repository.dart';
+import 'core/data/demo_store.dart';
+import 'core/merchant_repository.dart';
+import 'features/shell/merchant_shell.dart';
+import 'pages/widgets/dashboard_theme.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.repository});
+  final MerchantRepository? repository;
 
-  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(scaffoldBackgroundColor: Colors.white),
-
-      debugShowCheckedModeBanner: false,
-      home: AuthWrapper(),
-    );
-  }
+  Widget build(BuildContext context) => GetMaterialApp(
+    title: 'Tagnar Merchant · Demo',
+    debugShowCheckedModeBanner: false,
+    theme: DashboardTheme.data,
+    home: MerchantShell(
+      repository: repository ?? DemoMerchantRepository(PreferencesDemoStore()),
+    ),
+  );
 }

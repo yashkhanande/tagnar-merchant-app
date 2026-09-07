@@ -32,10 +32,7 @@ class RecentPayments extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             if (onViewAll != null)
-              TextButton(
-                onPressed: onViewAll,
-                child: const Text('View all'),
-              ),
+              TextButton(onPressed: onViewAll, child: const Text('View all')),
           ],
         ),
         const SizedBox(height: 12),
@@ -53,10 +50,7 @@ class RecentPayments extends StatelessWidget {
                   children: [
                     for (var i = 0; i < visiblePayments.length; i++) ...[
                       if (i > 0)
-                        const Divider(
-                          height: 28,
-                          color: DashboardTheme.border,
-                        ),
+                        const Divider(height: 28, color: DashboardTheme.border),
                       _PaymentTile(
                         payment: visiblePayments[i],
                         onTap: onPaymentTap == null
@@ -76,10 +70,7 @@ class _PaymentTile extends StatelessWidget {
   final DashboardPayment payment;
   final VoidCallback? onTap;
 
-  const _PaymentTile({
-    required this.payment,
-    this.onTap,
-  });
+  const _PaymentTile({required this.payment, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -89,8 +80,7 @@ class _PaymentTile extends StatelessWidget {
     final dateLabel = localizations.formatMediumDate(date);
     final timeLabel = localizations.formatTimeOfDay(
       TimeOfDay.fromDateTime(date),
-      alwaysUse24HourFormat:
-          MediaQuery.of(context).alwaysUse24HourFormat,
+      alwaysUse24HourFormat: MediaQuery.of(context).alwaysUse24HourFormat,
     );
 
     final String statusLabel;
@@ -148,10 +138,7 @@ class _PaymentTile extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  statusLabel,
-                  style: TextStyle(color: statusColor),
-                ),
+                Text(statusLabel, style: TextStyle(color: statusColor)),
               ],
             ),
           ],
