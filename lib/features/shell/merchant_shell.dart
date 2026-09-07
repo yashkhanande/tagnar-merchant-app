@@ -12,8 +12,17 @@ import '../requests/requests_page.dart';
 import 'merchant_controller.dart';
 
 class MerchantShell extends StatefulWidget {
-  const MerchantShell({super.key, required this.repository});
+  const MerchantShell({
+    super.key,
+    required this.repository,
+    this.live = false,
+    this.onChooseShop,
+    this.onSignOut,
+  });
   final MerchantRepository repository;
+  final bool live;
+  final VoidCallback? onChooseShop;
+  final VoidCallback? onSignOut;
   @override
   State<MerchantShell> createState() => _MerchantShellState();
 }
@@ -49,29 +58,44 @@ class _MerchantShellState extends State<MerchantShell> {
           actions: [
             const Center(child: StatusPill('MERCHANT')),
             IconButton(
-              tooltip: 'Refresh demo data',
+              tooltip: widget.live
+                  ? 'Refresh Firebase data'
+                  : 'Refresh demo data',
               onPressed: c.loading ? null : () => c.load(),
               icon: const Icon(Icons.refresh),
             ),
-            PopupMenuButton<DemoScenario>(
-              tooltip: 'Demo tools',
-              icon: const Icon(Icons.tune),
-              onSelected: (v) => c.load(scenario: v),
-              itemBuilder: (_) => const [
-                PopupMenuItem(
-                  value: DemoScenario.normal,
-                  child: Text('Normal demo / reload'),
-                ),
-                PopupMenuItem(
-                  value: DemoScenario.empty,
-                  child: Text('Preview empty state'),
-                ),
-                PopupMenuItem(
-                  value: DemoScenario.error,
-                  child: Text('Preview error state'),
-                ),
-              ],
-            ),
+            if (!widget.live)
+              PopupMenuButton<DemoScenario>(
+                tooltip: 'Demo tools',
+                icon: const Icon(Icons.tune),
+                onSelected: (v) => c.load(scenario: v),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: DemoScenario.normal,
+                    child: Text('Normal demo / reload'),
+                  ),
+                  PopupMenuItem(
+                    value: DemoScenario.empty,
+                    child: Text('Preview empty state'),
+                  ),
+                  PopupMenuItem(
+                    value: DemoScenario.error,
+                    child: Text('Preview error state'),
+                  ),
+                ],
+              ),
+            if (widget.live && widget.onChooseShop != null)
+              IconButton(
+                tooltip: 'Choose another shop',
+                onPressed: widget.onChooseShop,
+                icon: const Icon(Icons.storefront_outlined),
+              ),
+            if (widget.live && widget.onSignOut != null)
+              IconButton(
+                tooltip: 'Sign out',
+                onPressed: widget.onSignOut,
+                icon: const Icon(Icons.logout),
+              ),
             const SizedBox(width: 4),
           ],
         ),
@@ -86,7 +110,9 @@ class _MerchantShellState extends State<MerchantShell> {
                   vertical: 8,
                 ),
                 child: Text(
-                  c.scenario == DemoScenario.normal
+                  widget.live
+                      ? 'LIVE · Firebase data for the selected shop'
+                      : c.scenario == DemoScenario.normal
                       ? 'DEMO MODE · Sample data, saved locally'
                       : 'DEMO MODE · ${c.scenario.label} state preview',
                   style: const TextStyle(
@@ -97,13 +123,17 @@ class _MerchantShellState extends State<MerchantShell> {
               ),
               Expanded(
                 child: c.loading
-                    ? const Center(
+                    ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 16),
-                            Text('Loading your demo shop…'),
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 16),
+                            Text(
+                              widget.live
+                                  ? 'Loading your shop…'
+                                  : 'Loading your demo shop…',
+                            ),
                           ],
                         ),
                       )
@@ -129,7 +159,7 @@ class _MerchantShellState extends State<MerchantShell> {
                           RequestsPage(controller: c),
                           PaymentsPage(data: c.data!),
                           ChatsPage(controller: c),
-                          MerchantProfilePage(controller: c),
+                          MerchantProfilePage(controller: c, live: widget.live),
                         ],
                       ),
               ),

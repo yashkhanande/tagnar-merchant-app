@@ -77,13 +77,15 @@ class FakeAccess implements MerchantAccessRepository {
   @override
   Stream<ShopAccessSnapshot> watchShops(String uid) => stream.stream;
   @override
-  Future<ApprovedAnchor> loadApprovedAnchor({
+  Stream<ApprovedAnchor?> watchApprovedAnchor({
     required String uid,
     required MerchantShop shop,
-  }) async {
+  }) async* {
     if (deny) throw const AccessFailure('Permission denied');
-    return anchorResult?.future ??
-        ApprovedAnchor(id: shop.anchorId!, shopId: shop.id, merchantId: uid);
+    yield await (anchorResult?.future ??
+        Future.value(
+          ApprovedAnchor(id: shop.anchorId!, shopId: shop.id, merchantId: uid),
+        ));
   }
 }
 

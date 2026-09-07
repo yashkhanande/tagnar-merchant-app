@@ -77,23 +77,47 @@ class FirestoreMerchantAccessRepository implements MerchantAccessRepository {
   }
 
   @override
-  Stream<ApprovedAnchor?> watchApprovedAnchor({required String uid, required MerchantShop shop}) {
+  Stream<ApprovedAnchor?> watchApprovedAnchor({
+    required String uid,
+    required MerchantShop shop,
+  }) {
     _checkSession(uid);
-    if (!shop.approved) throw const AccessFailure('This shop is waiting for Master approval.');
-    return firestore.collection('merchant_anchors').doc(shop.anchorId)
-      .snapshots(includeMetadataChanges: true).map((document) {
-        _checkSession(uid);
-        if (document.metadata.isFromCache || document.metadata.hasPendingWrites) return null;
-        final data = document.data();
-        if (data == null || data['merchantId'] != uid || data['shopId'] != shop.id || data['active'] != true) {
-          throw const AccessFailure('This anchor is unavailable. Refresh or contact your Master.');
-        }
-        return ApprovedAnchor(id: document.id, shopId: shop.id, merchantId: uid);
-      }).handleError((Object e) {
-        throw AccessFailure(e is FirebaseException ? accessMessage(e.code) : 'This anchor is unavailable. Refresh or contact your Master.');
-      });
+    if (!shop.approved) {
+      throw const AccessFailure('This shop is waiting for Master approval.');
+    }
+    return firestore
+        .collection('merchant_anchors')
+        .doc(shop.anchorId)
+        .snapshots(includeMetadataChanges: true)
+        .map((document) {
+          _checkSession(uid);
+          if (document.metadata.isFromCache ||
+              document.metadata.hasPendingWrites) {
+            return null;
+          }
+          final data = document.data();
+          if (data == null ||
+              data['merchantId'] != uid ||
+              data['shopId'] != shop.id ||
+              data['active'] != true) {
+            throw const AccessFailure(
+              'This anchor is unavailable. Refresh or contact your Master.',
+            );
+          }
+          return ApprovedAnchor(
+            id: document.id,
+            shopId: shop.id,
+            merchantId: uid,
+          );
+        })
+        .handleError((Object e) {
+          throw AccessFailure(
+            e is FirebaseException
+                ? accessMessage(e.code)
+                : 'This anchor is unavailable. Refresh or contact your Master.',
+          );
+        });
   }
-
 }
 
 String accessMessage(String code) => switch (code) {

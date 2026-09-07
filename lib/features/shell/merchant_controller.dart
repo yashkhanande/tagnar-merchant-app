@@ -62,5 +62,5 @@ class MerchantController extends GetxController {
 
   static String messageFor(Object error) => error is MerchantException
       ? error.message
-      : 'Could not load or save demo data. Please try again.';
+      : 'Could not load or save shop data. Please try again.';
 }

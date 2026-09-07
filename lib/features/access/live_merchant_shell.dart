@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/data/firestore_merchant_repository.dart';
+import '../shell/merchant_shell.dart';
 import '../../pages/widgets/dashboard_card.dart';
 import '../../shared/widgets/merchant_widgets.dart';
 import '../auth/merchant_session_controller.dart';
@@ -19,6 +23,28 @@ class _LiveMerchantShellState extends State<LiveMerchantShell> {
     final approved = c.shops.where((shop) => shop.approved).toList();
     final connected =
         c.anchor != null && c.selectedShop != null && c.accessError == null;
+    if (connected) {
+      final shop = c.selectedShop!;
+      return MerchantShell(
+        key: ValueKey('${shop.id}:${c.anchor!.id}'),
+        live: true,
+        repository: FirestoreMerchantRepository(
+          firestore: FirebaseFirestore.instanceFor(
+            app: FirebaseAuth.instance.app,
+            databaseId: 'tagnar-merchant',
+          ),
+          auth: FirebaseAuth.instance,
+          merchantId: user.uid,
+          merchantName: user.name,
+          shopId: shop.id,
+          shopName: shop.name,
+          shopAddress: shop.address,
+          anchorId: c.anchor!.id,
+          phone: user.verifiedPhone!,
+        ),
+        onSignOut: () => c.signOut(),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tagnar Merchant'),

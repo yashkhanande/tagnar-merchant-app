@@ -285,19 +285,35 @@ class MerchantSessionController extends GetxController {
     accessError = null;
     update();
     _anchorSubscription?.cancel();
-    bool current() => !isClosed && version == _selectionVersion && session == _sessionVersion;
+    final firstResult = Completer<void>();
+    bool current() =>
+        !isClosed && version == _selectionVersion && session == _sessionVersion;
     void failed(Object e) {
       if (!current()) return;
-      anchor = null; loadingAnchor = false; accessError = message(e); update();
+      anchor = null;
+      loadingAnchor = false;
+      accessError = message(e);
+      update();
+      if (!firstResult.isCompleted) firstResult.complete();
     }
+
     try {
-      _anchorSubscription = access.watchApprovedAnchor(uid: uid, shop: shop).listen((value) {
-        if (!current()) return;
-        anchor = value; loadingAnchor = false;
-        accessError = value == null ? 'Connect to the internet to confirm your anchor access.' : null;
-        update();
-      }, onError: failed);
-    } catch (e) { failed(e); }
+      _anchorSubscription = access
+          .watchApprovedAnchor(uid: uid, shop: shop)
+          .listen((value) {
+            if (!current()) return;
+            anchor = value;
+            loadingAnchor = false;
+            accessError = value == null
+                ? 'Connect to the internet to confirm your anchor access.'
+                : null;
+            update();
+            if (!firstResult.isCompleted) firstResult.complete();
+          }, onError: failed);
+      await firstResult.future.timeout(const Duration(seconds: 20));
+    } catch (e) {
+      failed(e);
+    }
   }
 
   Future<void> signOut() async {

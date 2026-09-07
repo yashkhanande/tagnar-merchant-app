@@ -99,7 +99,10 @@ class FirebaseMerchantAuthRepository implements MerchantAuthRepository {
           }
         },
         verificationFailed: (error) => emit(
-          PhoneEvent(PhoneEventKind.failed, message: authMessage(error.code)),
+          PhoneEvent(
+            PhoneEventKind.failed,
+            message: authMessage(error.code, details: error.message),
+          ),
         ),
         codeSent: (verificationId, resendToken) {
           if (!_current(generation, user.uid)) return;
@@ -206,29 +209,39 @@ class FirebaseMerchantAuthRepository implements MerchantAuthRepository {
 String failureMessage(Object error) => error is AuthFailure
     ? error.message
     : 'Could not finish verification. Please try again.';
-String authMessage(String code) => switch (code) {
-  'invalid-phone-number' => 'Enter a valid phone number with its country code.',
-  'invalid-verification-code' ||
-  'invalid-credential' => 'The SMS code is incorrect. Please try again.',
-  'session-expired' ||
-  'invalid-verification-id' => 'This SMS session expired. Request a new code.',
-  'credential-already-in-use' =>
-    'This phone belongs to another account. Sign in to that account or contact support. Your Google account has not been switched.',
-  'provider-already-linked' =>
-    'A phone is already linked. Refresh your session or sign in again.',
-  'requires-recent-login' =>
-    'Please sign out and sign in again before verifying your phone.',
-  'too-many-requests' => 'Too many attempts. Wait before trying again.',
-  'quota-exceeded' =>
-    'The SMS service has reached its limit. Please try later.',
-  'operation-not-allowed' =>
-    'Phone sign-in is not enabled for this Firebase project. Contact the project administrator.',
-  'app-not-authorized' ||
-  'invalid-app-credential' ||
-  'missing-client-identifier' =>
-    'App verification failed. The administrator must check Android fingerprints and Firebase setup.',
-  'network-request-failed' => 'Check your internet connection and try again.',
-  'user-disabled' || 'user-token-expired' =>
-    'This account cannot continue. Sign in again or contact support.',
-  _ => 'Authentication could not finish. Please try again or contact support.',
-};
+String authMessage(String code, {String? details}) {
+  final normalizedDetails = details?.toLowerCase() ?? '';
+  if (normalizedDetails.contains('region enabled') ||
+      normalizedDetails.contains('region is not allowed') ||
+      normalizedDetails.contains('sms unable to be sent until this region')) {
+    return 'SMS delivery is disabled for this phone region in Firebase. Ask the administrator to enable the region under Authentication settings.';
+  }
+  return switch (code) {
+    'invalid-phone-number' =>
+      'Enter a valid phone number with its country code.',
+    'invalid-verification-code' ||
+    'invalid-credential' => 'The SMS code is incorrect. Please try again.',
+    'session-expired' || 'invalid-verification-id' =>
+      'This SMS session expired. Request a new code.',
+    'credential-already-in-use' =>
+      'This phone belongs to another account. Sign in to that account or contact support. Your Google account has not been switched.',
+    'provider-already-linked' =>
+      'A phone is already linked. Refresh your session or sign in again.',
+    'requires-recent-login' =>
+      'Please sign out and sign in again before verifying your phone.',
+    'too-many-requests' => 'Too many attempts. Wait before trying again.',
+    'quota-exceeded' =>
+      'The SMS service has reached its limit. Please try later.',
+    'operation-not-allowed' =>
+      'Phone sign-in is not enabled for this Firebase project. Contact the project administrator.',
+    'app-not-authorized' ||
+    'invalid-app-credential' ||
+    'missing-client-identifier' =>
+      'App verification failed. The administrator must check Android fingerprints and Firebase setup.',
+    'network-request-failed' => 'Check your internet connection and try again.',
+    'user-disabled' || 'user-token-expired' =>
+      'This account cannot continue. Sign in again or contact support.',
+    _ =>
+      'Authentication could not finish. Please try again or contact support.',
+  };
+}

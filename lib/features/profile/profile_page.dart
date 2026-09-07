@@ -5,8 +5,13 @@ import '../../shared/widgets/merchant_widgets.dart';
 import '../shell/merchant_controller.dart';
 
 class MerchantProfilePage extends StatelessWidget {
-  const MerchantProfilePage({super.key, required this.controller});
+  const MerchantProfilePage({
+    super.key,
+    required this.controller,
+    this.live = false,
+  });
   final MerchantController controller;
+  final bool live;
   @override
   Widget build(BuildContext context) {
     final profile = controller.data!.profile;
@@ -33,8 +38,10 @@ class MerchantProfilePage extends StatelessWidget {
               DetailLine('Location', profile.address),
               DetailLine('Merchant ID', profile.merchantId),
               DetailLine('Associated anchor', profile.anchorId),
-              const Notice(
-                'This demo merchant has exactly one fixed shop anchor.',
+              Notice(
+                live
+                    ? 'This shop and anchor assignment was verified by Firebase.'
+                    : 'This demo merchant has exactly one fixed shop anchor.',
               ),
             ],
           ),
@@ -45,51 +52,66 @@ class MerchantProfilePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               StatusPill(
-                profile.phoneConfirmed ? 'Demo confirmed' : 'Not confirmed',
+                profile.phoneConfirmed
+                    ? live
+                          ? 'Verified'
+                          : 'Demo confirmed'
+                    : 'Not confirmed',
               ),
               DetailLine('Phone number', profile.phone),
-              const Notice(
-                'SMS OTP is planned. In this demo no SMS is sent and no real phone ownership is verified.',
+              Notice(
+                live
+                    ? 'This number is verified by Firebase Authentication.'
+                    : 'SMS OTP is planned. In this demo no SMS is sent and no real phone ownership is verified.',
               ),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) =>
-                        PhoneConfirmationPage(controller: controller),
+              if (!live)
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          PhoneConfirmationPage(controller: controller),
+                    ),
+                  ),
+                  icon: const Icon(Icons.phone_android),
+                  label: Text(
+                    profile.phoneConfirmed
+                        ? 'Change demo phone'
+                        : 'Confirm phone number',
                   ),
                 ),
-                icon: const Icon(Icons.phone_android),
-                label: Text(
-                  profile.phoneConfirmed
-                      ? 'Change demo phone'
-                      : 'Confirm phone number',
-                ),
-              ),
             ],
           ),
         ),
-        const SectionTitle('About this preview'),
-        const DashboardCard(
+        SectionTitle(live ? 'Data source' : 'About this preview'),
+        DashboardCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DetailLine(
-                'Stage 1',
-                'Merchant UI with realistic local demo data',
-              ),
-              DetailLine(
-                'Saved on this device',
-                'Offer decisions, messages, read state and demo phone confirmation',
-              ),
-              DetailLine(
-                'Try different states',
-                'Use Demo tools in the top bar for loading, empty and error previews. These previews do not delete saved data.',
-              ),
-              Notice(
-                'Firebase authentication, real SMS, chat delivery, notifications, payment records and analytics integrations are later stages.',
-              ),
-            ],
+            children: live
+                ? const [
+                    DetailLine('Source', 'Firebase · tagnar-merchant database'),
+                    DetailLine('Scope', 'Selected approved shop only'),
+                    Notice(
+                      'Missing records appear as empty states. Connection and access errors can be retried with Refresh.',
+                    ),
+                  ]
+                : const [
+                    DetailLine(
+                      'Stage 1',
+                      'Merchant UI with realistic local demo data',
+                    ),
+                    DetailLine(
+                      'Saved on this device',
+                      'Offer decisions, messages, read state and demo phone confirmation',
+                    ),
+                    DetailLine(
+                      'Try different states',
+                      'Use Demo tools in the top bar for loading, empty and error previews. These previews do not delete saved data.',
+                    ),
+                    Notice(
+                      'Firebase authentication, real SMS, chat delivery, notifications, payment records and analytics integrations are later stages.',
+                    ),
+                  ],
           ),
         ),
       ],

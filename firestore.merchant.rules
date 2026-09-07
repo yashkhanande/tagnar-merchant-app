@@ -22,6 +22,13 @@ service cloud.firestore {
     function ownMerchant(uid) {
       return googleAndPhone() && request.auth.uid == uid && eligibleMerchant(uid);
     }
+    function ownsShopData(data) {
+      return ownMerchant(data.merchantId)
+        && data.shopId is string
+        && exists(/databases/$(database)/documents/merchant_shops/$(data.shopId))
+        && get(/databases/$(database)/documents/merchant_shops/$(data.shopId)).data.merchantId == request.auth.uid
+        && get(/databases/$(database)/documents/merchant_shops/$(data.shopId)).data.status == 'approved';
+    }
     function validProfile(uid) {
       let d = request.resource.data;
       return d.uid == uid && d.name is string && d.name.size() > 0 && d.name.size() <= 200
@@ -80,7 +87,59 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/merchant_shops/$(request.resource.data.shopId)).data.approvedBy == request.auth.uid;
       allow update, delete: if false;
     }
-    // Stages 3–5 grant scoped access after their business rules are agreed.
+
+    // Operational records are provisioned by trusted backend/Admin SDK jobs.
+    // Merchants can only query records carrying their own merchant and shop IDs.
+    match /merchant_requests/{requestId} {
+      allow read: if ownsShopData(resource.data);
+      allow write: if false;
+    }
+    match /merchant_payments/{paymentId} {
+      allow read: if ownsShopData(resource.data);
+      allow write: if false;
+    }
+    match /merchant_interactions/{interactionId} {
+      allow read: if ownsShopData(resource.data);
+      allow write: if false;
+    }
+    match /merchant_offers/{offerId} {
+      allow read: if ownsShopData(resource.data);
+      allow update: if ownsShopData(resource.data)
+        && resource.data.get('decision', null) == null
+        && resource.data.expiresAt > request.time
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['decision', 'decidedAt', 'decidedBy'])
+        && request.resource.data.decision in ['accepted', 'declined']
+        && request.resource.data.decidedAt == request.time
+        && request.resource.data.decidedBy == request.auth.uid;
+      allow create, delete: if false;
+    }
+    match /merchant_conversations/{conversationId} {
+      allow read: if ownsShopData(resource.data);
+      allow update: if ownsShopData(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['unread', 'readAt'])
+        && request.resource.data.unread == 0
+        && request.resource.data.readAt == request.time;
+      allow create, delete: if false;
+
+      match /messages/{messageId} {
+        function conversation() {
+          return get(/databases/$(database)/documents/merchant_conversations/$(conversationId));
+        }
+        allow read: if ownsShopData(conversation().data);
+        allow create: if ownsShopData(conversation().data)
+          && request.resource.data.keys().hasOnly(
+            ['text', 'sentAt', 'senderId', 'fromMerchant'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000
+          && request.resource.data.sentAt == request.time
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.fromMerchant == true;
+        allow update, delete: if false;
+      }
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }

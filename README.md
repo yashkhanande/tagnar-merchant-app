@@ -1,7 +1,9 @@
 # Tagnar Merchant
 
-Stage 1 is a working Flutter demo for Android. It opens straight into a sample
-merchant shop and needs no Firebase account, SMS service, or payment credentials.
+The default app uses Firebase Authentication and the named `tagnar-merchant`
+Firestore database. After Google sign-in, phone verification, and shop approval,
+the dashboard, requests, offers, payments, analytics, and chats load records for
+the selected shop. It never substitutes demo records when Firebase data is absent.
 
 ## Run it from Android Studio
 
@@ -23,6 +25,46 @@ merchant shop and needs no Firebase account, SMS service, or payment credentials
    The entry file is `lib/main.dart`. You can also select that file and press Run.
 5. In a terminal run, press `r` after saving Dart code to hot reload; press `q` to
    stop. Use a full restart when changing dependencies or native Android files.
+
+To run the credential-free demo explicitly, use:
+
+```sh
+flutter run -t lib/main_demo.dart
+```
+
+## Firestore data shape
+
+Operational documents are stored in `merchant_requests`, `merchant_offers`,
+`merchant_payments`, `merchant_interactions`, and `merchant_conversations`.
+Every document must contain the approved `merchantId` and `shopId`. Conversation
+messages live under `merchant_conversations/{conversationId}/messages`.
+
+The adapter accepts Firestore timestamps (or ISO strings) and expects the enum
+values used by the app: request kind `brand|product`, request status
+`pending|approved|declined`, payment status
+`received|pending|failed|refunded`, chat role `brand|master|user`, and offer
+decision `accepted|declined` (or no decision field). Amounts use integer paise;
+offer rewards use integer rupees. Backend/Admin SDK processes must create the
+records; client payments remain read-only.
+
+Deploy the scoped rules before using live feature data:
+
+```sh
+firebase deploy --only firestore:rules --config firebase.merchant.json
+```
+
+Empty collections render normal empty states. Offline, denied, missing-index,
+malformed-data, and unavailable-database errors render a retryable error instead
+of showing fabricated data.
+
+## Phone authentication setup
+
+Before real SMS verification can work, enable the **Phone** provider in Firebase
+Console under Authentication > Sign-in method. Then open Authentication settings
+and allow the countries where SMS should be delivered (for `+91` numbers, enable
+India). Register both the debug/release SHA-1 and SHA-256 certificate fingerprints
+for the Android app, download the refreshed `google-services.json`, and rebuild.
+Use Firebase test phone numbers during development to avoid sending real SMS.
 
 If Flutter is not found, add your Flutter `bin` folder to your PATH and reopen the
 terminal. Run `flutter doctor -v` for installation diagnostics. If it reports
