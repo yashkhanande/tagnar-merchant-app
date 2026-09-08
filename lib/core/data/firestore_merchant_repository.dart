@@ -34,6 +34,10 @@ class FirestoreMerchantRepository implements MerchantRepository {
       .where('merchantId', isEqualTo: merchantId)
       .where('anchorId', isEqualTo: anchorId);
 
+  Query<Map<String, dynamic>> _forMerchant(String collection) => firestore
+      .collection(collection)
+      .where('merchantId', isEqualTo: merchantId);
+
   @override
   Future<MerchantSnapshot> load({
     DemoScenario scenario = DemoScenario.normal,
@@ -41,7 +45,7 @@ class FirestoreMerchantRepository implements MerchantRepository {
     _checkSession();
     try {
       final results = await Future.wait([
-        _forAnchor(
+        _forMerchant(
           'merchant_requests',
         ).get(const GetOptions(source: Source.server)),
         _forAnchor(
@@ -59,8 +63,10 @@ class FirestoreMerchantRepository implements MerchantRepository {
       ]).timeout(const Duration(seconds: 25));
       _checkSession();
 
-      final requests = results[0].docs.map(_request).toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
+      final requests =
+          results[0].docs.map(_request).where(_targetsSelectedAnchor).toList()
+            ..sort((a, b) => b.date.compareTo(a.date));
+      if (requests.isEmpty) requests.add(_previewRequest());
       final offers = results[1].docs.map(_offer).toList()
         ..sort((a, b) => a.expiresAt.compareTo(b.expiresAt));
       final payments = results[2].docs.map(_payment).toList()
@@ -209,6 +215,19 @@ class FirestoreMerchantRepository implements MerchantRepository {
 
   MerchantRequest _request(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data();
+    final targetScope = _optionalEnum(
+      AnchorTargetScope.values,
+      d['targetScope'],
+      AnchorTargetScope.single,
+    );
+    final targetIds = d['anchorDocumentIds'] is List
+        ? (d['anchorDocumentIds'] as List)
+              .whereType<String>()
+              .where((id) => id.trim().isNotEmpty)
+              .toList()
+        : d['anchorId'] is String && (d['anchorId'] as String).trim().isNotEmpty
+        ? <String>[d['anchorId'] as String]
+        : <String>[];
     return MerchantRequest(
       id: doc.id,
       brand: _string(d, 'brand'),
@@ -218,8 +237,28 @@ class FirestoreMerchantRepository implements MerchantRepository {
       date: _date(d['date'] ?? d['createdAt'], 'date'),
       category: _string(d, 'category'),
       description: _string(d, 'description'),
+      targetScope: targetScope,
+      anchorDocumentIds: List.unmodifiable(targetIds),
     );
   }
+
+  bool _targetsSelectedAnchor(MerchantRequest request) =>
+      request.targetScope == AnchorTargetScope.all ||
+      request.anchorDocumentIds.contains(anchorId);
+
+  MerchantRequest _previewRequest() => MerchantRequest(
+    id: 'PREVIEW-BRAND-REQUEST',
+    brand: 'Demo Brand',
+    title: 'Preview campaign for all your anchors',
+    kind: RequestKind.brand,
+    status: RequestStatus.pending,
+    date: DateTime.now(),
+    category: 'Brand campaign',
+    description:
+        'This preview shows how an incoming brand request will appear. A future Brand app can target one anchor, a selected group of anchor document IDs, or every anchor owned by this merchant.',
+    targetScope: AnchorTargetScope.all,
+    isPreview: true,
+  );
 
   MerchantOffer _offer(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data();
@@ -309,6 +348,20 @@ class FirestoreMerchantRepository implements MerchantRepository {
       }
     }
     throw FormatException('invalid $key');
+  }
+
+  static T _optionalEnum<T extends Enum>(
+    List<T> values,
+    Object? value,
+    T fallback,
+  ) {
+    if (value == null) return fallback;
+    if (value is String) {
+      for (final candidate in values) {
+        if (candidate.name == value) return candidate;
+      }
+    }
+    return fallback;
   }
 
   static String _firebaseMessage(String code) => switch (code) {

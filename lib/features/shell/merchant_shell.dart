@@ -5,6 +5,7 @@ import '../../core/models.dart';
 import '../../pages/widgets/dashboard_theme.dart';
 import '../../shared/widgets/merchant_widgets.dart';
 import '../chats/chats_page.dart';
+import '../access/access_repository.dart';
 import '../dashboard/dashboard_page.dart';
 import '../payments/payments_page.dart';
 import '../profile/profile_page.dart';
@@ -17,10 +18,16 @@ class MerchantShell extends StatefulWidget {
     required this.repository,
     this.live = false,
     this.onSignOut,
+    this.anchors = const [],
+    this.selectedAnchor,
+    this.onAnchorSelected,
   });
   final MerchantRepository repository;
   final bool live;
   final VoidCallback? onSignOut;
+  final List<MerchantAnchor> anchors;
+  final MerchantAnchor? selectedAnchor;
+  final ValueChanged<MerchantAnchor>? onAnchorSelected;
   @override
   State<MerchantShell> createState() => _MerchantShellState();
 }
@@ -103,7 +110,7 @@ class _MerchantShellState extends State<MerchantShell> {
                 ),
                 child: Text(
                   widget.live
-                      ? 'LIVE · Firebase data for the selected anchor'
+                      ? 'LIVE · Firebase data · ${widget.anchors.length} ${widget.anchors.length == 1 ? 'anchor' : 'anchors'}'
                       : c.scenario == DemoScenario.normal
                       ? 'DEMO MODE · Sample data, saved locally'
                       : 'DEMO MODE · ${c.scenario.label} state preview',
@@ -113,6 +120,12 @@ class _MerchantShellState extends State<MerchantShell> {
                   ),
                 ),
               ),
+              if (widget.live && widget.anchors.length > 1)
+                _AnchorSwitcher(
+                  anchors: widget.anchors,
+                  selected: widget.selectedAnchor!,
+                  onChanged: widget.onAnchorSelected!,
+                ),
               Expanded(
                 child: c.loading
                     ? Center(
@@ -147,8 +160,13 @@ class _MerchantShellState extends State<MerchantShell> {
                     : IndexedStack(
                         index: c.selectedTab,
                         children: [
-                          MerchantDashboardPage(controller: c),
-                          RequestsPage(controller: c),
+                          MerchantDashboardPage(
+                            controller: c,
+                            live: widget.live,
+                            anchors: widget.anchors,
+                            selectedAnchor: widget.selectedAnchor,
+                          ),
+                          RequestsPage(controller: c, live: widget.live),
                           PaymentsPage(data: c.data!),
                           ChatsPage(controller: c),
                           MerchantProfilePage(controller: c, live: widget.live),
@@ -196,5 +214,57 @@ class _MerchantShellState extends State<MerchantShell> {
         ),
       );
     },
+  );
+}
+
+class _AnchorSwitcher extends StatelessWidget {
+  const _AnchorSwitcher({
+    required this.anchors,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<MerchantAnchor> anchors;
+  final MerchantAnchor selected;
+  final ValueChanged<MerchantAnchor> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.view_in_ar_outlined, size: 20),
+        const SizedBox(width: 10),
+        const Text('Anchor'),
+        const SizedBox(width: 12),
+        Expanded(
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value: selected.id,
+              items: anchors
+                  .map(
+                    (anchor) => DropdownMenuItem(
+                      value: anchor.id,
+                      child: Text(
+                        '${anchor.name} · ${anchor.displayId}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (id) {
+                if (id == null || id == selected.id) return;
+                onChanged(anchors.firstWhere((anchor) => anchor.id == id));
+              },
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }

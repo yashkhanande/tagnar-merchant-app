@@ -28,8 +28,13 @@ service cloud.firestore {
     function ownsAnchorData(data) {
       return ownMerchant(data.merchantId)
         && data.anchorId is string
-        && exists(/databases/$(database)/documents/anchor/$(data.anchorId))
-        && get(/databases/$(database)/documents/anchor/$(data.anchorId)).data.merchantId == request.auth.uid;
+        && data.anchorId.size() > 0;
+    }
+    function ownsRequestData(data) {
+      // Request documents are client-read-only and provisioned by the trusted
+      // backend. Merchant ownership is the query-enforceable security boundary;
+      // targetScope and anchorDocumentIds are presentation filters.
+      return ownMerchant(data.merchantId);
     }
     function validAuthProfile(uid) {
       let d = request.resource.data;
@@ -87,7 +92,7 @@ service cloud.firestore {
     // Operational records are provisioned by trusted backend/Admin SDK jobs.
     // Merchants can only query records carrying their own merchant and anchor IDs.
     match /merchant_requests/{requestId} {
-      allow read: if ownsAnchorData(resource.data);
+      allow read: if ownsRequestData(resource.data);
       allow write: if false;
     }
     match /merchant_payments/{paymentId} {

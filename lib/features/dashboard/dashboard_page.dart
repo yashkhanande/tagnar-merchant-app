@@ -7,11 +7,21 @@ import '../../shared/widgets/merchant_widgets.dart';
 import '../payments/payments_page.dart';
 import '../requests/offer_dialog.dart';
 import '../shell/merchant_controller.dart';
+import '../access/access_repository.dart';
 import 'analytics_page.dart';
 
 class MerchantDashboardPage extends StatelessWidget {
-  const MerchantDashboardPage({super.key, required this.controller});
+  const MerchantDashboardPage({
+    super.key,
+    required this.controller,
+    this.live = false,
+    this.anchors = const [],
+    this.selectedAnchor,
+  });
   final MerchantController controller;
+  final bool live;
+  final List<MerchantAnchor> anchors;
+  final MerchantAnchor? selectedAnchor;
   @override
   Widget build(BuildContext context) {
     final data = controller.data!;
@@ -26,13 +36,21 @@ class MerchantDashboardPage extends StatelessWidget {
         .where((r) => r.status == RequestStatus.pending)
         .length;
     final active = data.offers.where((o) => o.isActive(DateTime.now())).length;
-    final views = data.interactions
-        .where((d) => inDateRange(d.date, 7, null))
-        .fold(0, (sum, d) => sum + d.views);
-    void analytics() => Navigator.push(
+    final views = live
+        ? selectedAnchor?.views ?? 0
+        : data.interactions
+              .where((d) => inDateRange(d.date, 7, null))
+              .fold(0, (sum, d) => sum + d.views);
+    void analytics({bool overall = false}) => Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (_) => AnalyticsPage(interactions: data.interactions),
+        builder: (_) => AnalyticsPage(
+          interactions: data.interactions,
+          live: live,
+          anchors: anchors,
+          selectedAnchorId: selectedAnchor?.id,
+          initiallyAllAnchors: overall,
+        ),
       ),
     );
     return FeatureList(
@@ -67,7 +85,7 @@ class MerchantDashboardPage extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
-                  const StatusPill('Demo'),
+                  StatusPill(live ? 'Active' : 'Demo'),
                 ],
               ),
               const SizedBox(height: 12),
@@ -103,11 +121,18 @@ class MerchantDashboardPage extends StatelessWidget {
               onTap: () => controller.selectTab(1),
             ),
             MetricCard(
-              label: 'Anchor views · 7 days',
+              label: live ? 'Total anchor views' : 'Anchor views · 7 days',
               value: '$views',
               icon: Icons.insights,
               onTap: analytics,
             ),
+            if (live)
+              MetricCard(
+                label: 'Games played',
+                value: '${selectedAnchor?.gamePlayed ?? 0}',
+                icon: Icons.sports_esports_outlined,
+                onTap: analytics,
+              ),
           ],
         ),
         const SizedBox(height: 18),
@@ -140,7 +165,9 @@ class MerchantDashboardPage extends StatelessWidget {
             ),
         SectionTitle(
           'User interactions',
-          subtitle: 'Sample discovery activity over the last 7 days',
+          subtitle: live
+              ? 'Lifetime counts recorded on this anchor'
+              : 'Sample discovery activity over the last 7 days',
           action: IconButton(
             tooltip: 'View analytics',
             onPressed: analytics,
@@ -156,17 +183,48 @@ class MerchantDashboardPage extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Explore daily anchor views, product taps and offer opens.',
+              Text(
+                live
+                    ? '${selectedAnchor?.gamePlayed ?? 0} games played on ${selectedAnchor?.displayId ?? data.profile.anchorId}.'
+                    : 'Explore daily anchor views, product taps and offer opens.',
               ),
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: analytics,
-                child: const Text('View interaction analytics'),
+                child: Text(
+                  live ? 'View anchor analytics' : 'View interaction analytics',
+                ),
               ),
             ],
           ),
         ),
+        if (live && anchors.length > 1) ...[
+          SectionTitle(
+            'All anchors',
+            subtitle: '${anchors.length} anchors linked to this merchant',
+          ),
+          DashboardCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${anchors.fold(0, (sum, anchor) => sum + anchor.views)} total views',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${anchors.fold(0, (sum, anchor) => sum + anchor.gamePlayed)} games played across all anchors',
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => analytics(overall: true),
+                  icon: const Icon(Icons.analytics_outlined),
+                  label: const Text('View overall analytics'),
+                ),
+              ],
+            ),
+          ),
+        ],
         SectionTitle(
           'Recent payments',
           action: TextButton(
@@ -187,8 +245,10 @@ class MerchantDashboardPage extends StatelessWidget {
                 child: PaymentTile(payment: p, anchorId: data.profile.anchorId),
               ),
             ),
-        const Notice(
-          'All totals, offers and activity on this dashboard are demo data.',
+        Notice(
+          live
+              ? 'Anchor views and games played come from the linked Firebase anchor document.'
+              : 'All totals, offers and activity on this dashboard are demo data.',
         ),
       ],
     );

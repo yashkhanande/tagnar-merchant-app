@@ -48,6 +48,10 @@ Operational documents are stored in `merchant_requests`, `merchant_offers`,
 `merchant_payments`, `merchant_interactions`, and `merchant_conversations`.
 Every document must contain the `merchantId` and `anchorId`. Conversation
 messages live under `merchant_conversations/{conversationId}/messages`.
+Rules authorize operational records by their authenticated `merchantId` and a
+non-empty `anchorId`; they do not assume the anchor document ID equals its
+`anchorId` field. Operational records must therefore continue to be created only
+by trusted backend/Admin SDK processes.
 
 The adapter accepts Firestore timestamps (or ISO strings) and expects the enum
 values used by the app: request kind `brand|product`, request status
@@ -56,6 +60,22 @@ values used by the app: request kind `brand|product`, request status
 decision `accepted|declined` (or no decision field). Amounts use integer paise;
 offer rewards use integer rupees. Backend/Admin SDK processes must create the
 records; client payments remain read-only.
+
+Each `anchor` document can expose the merchant-facing fields `prefabName`,
+`latitude`, `longitude`, `views`, and `gamePlayed`. The Firestore document ID is
+the canonical anchor ID; the app does not use an `anchorId` field inside the
+anchor document for relationships. A merchant with
+multiple documents carrying the same `merchantId` gets an anchor switcher. The
+dashboard shows the selected anchor's counters, and overall analytics sums
+`views` and `gamePlayed` across every linked anchor. The counters are lifetime
+totals; date filtering requires timestamped records in `merchant_interactions`.
+
+Brand requests use `targetScope: single|selected|all`. Single and selected
+requests store Firestore anchor document IDs in `anchorDocumentIds`; an all-anchor
+request does not require an ID list. Legacy request documents with an `anchorId`
+field are still readable. Until a Brand app exists, a selected anchor with no
+applicable requests displays a clearly marked, non-persisted `Demo Brand`
+preview request.
 
 Deploy the scoped rules before using live feature data:
 

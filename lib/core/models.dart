@@ -2,6 +2,8 @@ enum RequestKind { brand, product }
 
 enum RequestStatus { pending, approved, declined }
 
+enum AnchorTargetScope { single, selected, all }
+
 enum OfferDecision { accepted, declined }
 
 enum RecordStatus { received, pending, failed, refunded }
@@ -38,11 +40,27 @@ class MerchantRequest {
     required this.date,
     required this.category,
     required this.description,
+    this.targetScope = AnchorTargetScope.single,
+    this.anchorDocumentIds = const [],
+    this.isPreview = false,
   });
   final String id, brand, title, category, description;
   final RequestKind kind;
   final RequestStatus status;
   final DateTime date;
+  final AnchorTargetScope targetScope;
+  final List<String> anchorDocumentIds;
+  final bool isPreview;
+
+  String get placementLabel => switch (targetScope) {
+    AnchorTargetScope.all => 'All merchant anchors',
+    AnchorTargetScope.selected =>
+      'Selected anchors · ${anchorDocumentIds.join(', ')}',
+    AnchorTargetScope.single =>
+      anchorDocumentIds.isEmpty
+          ? 'Specific anchor'
+          : 'Specific anchor · ${anchorDocumentIds.first}',
+  };
 }
 
 class MerchantOffer {

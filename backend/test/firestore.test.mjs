@@ -58,11 +58,31 @@ test('operational records are scoped by merchantId and anchorId', async () => {
   await assertFails(getDoc(doc(dbFor('bob'), 'merchant_requests/request-a')));
 });
 
-test('wrong or missing anchor ownership denies operational data', async () => {
+test('brand requests support document-ID targets and all-anchor scope', async () => {
+  await seed('merchant_requests/selected', {
+    merchantId: 'alice',
+    targetScope: 'selected',
+    anchorDocumentIds: ['firestore-anchor-doc-a', 'firestore-anchor-doc-b'],
+  });
+  await seed('merchant_requests/all', {merchantId: 'alice', targetScope: 'all'});
+  const result = await assertSucceeds(getDocs(query(
+    collection(dbFor('alice'), 'merchant_requests'),
+    where('merchantId', '==', 'alice'),
+  )));
+  assert.equal(result.size, 2);
+  await assertFails(getDocs(query(
+    collection(dbFor('bob'), 'merchant_requests'),
+    where('merchantId', '==', 'alice'),
+  )));
+});
+
+test('request access trusts merchant ownership, not the anchor document path', async () => {
   await seed('merchant_requests/wrong-anchor', {merchantId: 'alice', anchorId: 'missing'});
   await seed('merchant_requests/wrong-merchant', {merchantId: 'bob', anchorId: 'anchor-a'});
-  await assertFails(getDoc(doc(dbFor('alice'), 'merchant_requests/wrong-anchor')));
+  await seed('merchant_requests/missing-anchor-id', {merchantId: 'alice'});
+  await assertSucceeds(getDoc(doc(dbFor('alice'), 'merchant_requests/wrong-anchor')));
   await assertFails(getDoc(doc(dbFor('alice'), 'merchant_requests/wrong-merchant')));
+  await assertSucceeds(getDoc(doc(dbFor('alice'), 'merchant_requests/missing-anchor-id')));
 });
 
 test('merchant cannot read another profile or enumerate merchants', async () => {

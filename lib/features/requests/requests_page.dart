@@ -7,8 +7,9 @@ import '../shell/merchant_controller.dart';
 import 'offer_dialog.dart';
 
 class RequestsPage extends StatefulWidget {
-  const RequestsPage({super.key, required this.controller});
+  const RequestsPage({super.key, required this.controller, this.live = false});
   final MerchantController controller;
+  final bool live;
   @override
   State<RequestsPage> createState() => _RequestsPageState();
 }
@@ -26,6 +27,11 @@ class _RequestsPageState extends State<RequestsPage> {
   @override
   Widget build(BuildContext context) {
     final data = widget.controller.data!;
+    String placement(MerchantRequest request) =>
+        request.targetScope == AnchorTargetScope.single &&
+            request.anchorDocumentIds.isEmpty
+        ? data.profile.anchorId
+        : request.placementLabel;
     final query = _search.text.trim().toLowerCase();
     final requests = data.requests
         .where(
@@ -77,7 +83,13 @@ class _RequestsPageState extends State<RequestsPage> {
           label: (v) => v?.label ?? 'All statuses',
           onChanged: (v) => setState(() => _status = v),
         ),
-        Text('${requests.length} requests · incoming demo proposals'),
+        Text(
+          '${requests.length} requests · ${requests.any((r) => r.isPreview)
+              ? 'includes preview data'
+              : widget.live
+              ? 'Firebase'
+              : 'incoming demo proposals'}',
+        ),
         const SizedBox(height: 14),
         if (requests.isEmpty)
           EmptyState(
@@ -103,7 +115,7 @@ class _RequestsPageState extends State<RequestsPage> {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: StatusPill(r.status.label),
+                    child: StatusPill(r.isPreview ? 'Preview' : r.status.label),
                   ),
                   DetailLine('Brand', r.brand),
                   DetailLine('Request ID', r.id),
@@ -112,10 +124,12 @@ class _RequestsPageState extends State<RequestsPage> {
                     '${r.kind.label} · ${r.category}',
                   ),
                   DetailLine('Submitted', dateLabel(r.date)),
-                  DetailLine('Requested placement', data.profile.anchorId),
+                  DetailLine('Requested placement', placement(r)),
                   DetailLine('Proposal', r.description),
-                  const Notice(
-                    'Demo request status is informational. Business permissions will be agreed before backend integration.',
+                  Notice(
+                    r.isPreview
+                        ? 'Preview only — this is not stored in Firebase. The Brand app will be able to request one anchor, selected anchors, or all anchors.'
+                        : 'This request came from Firebase and targets anchor document IDs.',
                   ),
                 ],
               ),
@@ -131,7 +145,7 @@ class _RequestsPageState extends State<RequestsPage> {
                             style: Theme.of(context).textTheme.labelLarge,
                           ),
                         ),
-                        StatusPill(r.status.label),
+                        StatusPill(r.isPreview ? 'Preview' : r.status.label),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -141,6 +155,11 @@ class _RequestsPageState extends State<RequestsPage> {
                     ),
                     const SizedBox(height: 8),
                     Text('${r.kind.label} · ${r.category}'),
+                    const SizedBox(height: 6),
+                    Text(
+                      placement(r),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [

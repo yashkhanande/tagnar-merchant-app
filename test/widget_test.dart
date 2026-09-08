@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tagnar_merchant/core/data/demo_merchant_repository.dart';
 import 'package:tagnar_merchant/core/data/demo_store.dart';
+import 'package:tagnar_merchant/features/access/access_repository.dart';
+import 'package:tagnar_merchant/features/dashboard/analytics_page.dart';
 import 'package:tagnar_merchant/main.dart';
+import 'package:tagnar_merchant/pages/widgets/dashboard_theme.dart';
 import 'package:tagnar_merchant/shared/widgets/merchant_widgets.dart';
 
 Future<void> launch(
@@ -78,7 +81,7 @@ void main() {
     await tester.tap(find.text('Organic pantry collection'));
     await tester.pumpAndSettle();
     expect(find.text('Request ID'), findsOneWidget);
-    expect(find.text('ANCHOR-PN-0142'), findsOneWidget);
+    expect(find.text('ANCHOR-PN-0142'), findsWidgets);
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -227,6 +230,52 @@ void main() {
     await tester.tap(find.widgetWithText(ChoiceChip, 'Today'));
     await tester.pumpAndSettle();
     expect(find.text('42'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('live analytics switches between all and one anchor', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: DashboardTheme.data,
+        home: const AnalyticsPage(
+          interactions: [],
+          live: true,
+          initiallyAllAnchors: true,
+          selectedAnchorId: 'anchor-a',
+          anchors: [
+            MerchantAnchor(
+              id: 'anchor-a',
+              name: 'Building',
+              views: 10,
+              gamePlayed: 2,
+            ),
+            MerchantAnchor(
+              id: 'anchor-b',
+              name: 'Lobby',
+              views: 5,
+              gamePlayed: 1,
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('All anchor analytics'), findsOneWidget);
+    expect(find.text('15'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('10 views'), findsOneWidget);
+    expect(find.text('5 views'), findsOneWidget);
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Building · anchor-a').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Anchor views'), findsOneWidget);
+    expect(find.text('10'), findsOneWidget);
+    expect(find.text('Anchor ID'), findsOneWidget);
+    expect(find.text('anchor-a'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 

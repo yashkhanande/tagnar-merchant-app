@@ -20,6 +20,9 @@ class LiveMerchantShell extends StatelessWidget {
       return MerchantShell(
         key: ValueKey(anchor.id),
         live: true,
+        anchors: controller.anchors,
+        selectedAnchor: anchor,
+        onAnchorSelected: controller.selectAnchor,
         repository: FirestoreMerchantRepository(
           firestore: FirebaseFirestore.instanceFor(
             app: FirebaseAuth.instance.app,

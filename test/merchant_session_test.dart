@@ -208,6 +208,25 @@ void main() {
     expect(controller.selectedAnchor?.id, 'anchor-99');
   });
 
+  test('anchor Firebase fields map to merchant analytics counters', () {
+    final parsed = MerchantAnchor.fromMap('firebase-document-id', const {
+      'anchorId': 'ANC-000003',
+      'prefabName': 'Building',
+      'latitude': 18.461601504236114,
+      'longitude': 73.88180252438978,
+      'views': 12,
+      'gamePlayed': 4,
+      'sensorData': {'isLocationReady': true},
+    });
+
+    expect(parsed.id, 'firebase-document-id');
+    expect(parsed.displayId, 'firebase-document-id');
+    expect(parsed.name, 'Building');
+    expect(parsed.views, 12);
+    expect(parsed.gamePlayed, 4);
+    expect(parsed.location, '18.461602, 73.881803');
+  });
+
   testWidgets(
     'live UI requires Google, SMS and onboarding before anchor access',
     (tester) async {
