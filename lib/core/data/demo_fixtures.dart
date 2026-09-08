@@ -4,7 +4,7 @@ MerchantSnapshot demoFixtures(DateTime now) {
   DateTime ago(int days, [int hour = 11]) =>
       DateTime(now.year, now.month, now.day - days, hour);
   return MerchantSnapshot(
-    profile: const ShopProfile(),
+    profile: const AnchorProfile(),
     requests: [
       MerchantRequest(
         id: 'REQ-1042',
@@ -15,7 +15,7 @@ MerchantSnapshot demoFixtures(DateTime now) {
         date: ago(0),
         category: 'Food & beverages',
         description:
-            'Proposal to feature six organic pantry products at your shop anchor. Includes a product display and a two-week discovery campaign.',
+            'Proposal to feature six organic pantry products at your anchor. Includes a product display and a two-week discovery campaign.',
       ),
       MerchantRequest(
         id: 'REQ-1041',
@@ -48,7 +48,7 @@ MerchantSnapshot demoFixtures(DateTime now) {
         date: ago(8),
         category: 'Lifestyle',
         description:
-            'A weekend brand placement proposal. Demo decline reason: category does not match the current shop selection.',
+            'A weekend brand placement proposal. Demo decline reason: category does not match the current anchor.',
       ),
       MerchantRequest(
         id: 'REQ-1032',
@@ -68,7 +68,7 @@ MerchantSnapshot demoFixtures(DateTime now) {
         brand: 'Daily Brew',
         title: 'A little coffee. More discovery.',
         description:
-            'Feature Daily Brew at your shop anchor for 7 days. The sample placement reward is ₹2,400. Accepting only updates this local demo; it does not create a payment.',
+            'Feature Daily Brew at your anchor for 7 days. The sample placement reward is ₹2,400. Accepting only updates this local demo; it does not create a payment.',
         rewardRupees: 2400,
         expiresAt: ago(-7),
       ),
@@ -186,7 +186,7 @@ MerchantSnapshot demoFixtures(DateTime now) {
           ChatMessage(
             id: 'm1',
             text:
-                'Your shop anchor is linked to Corner Market. Let me know if you need help with the display.',
+                'Your merchant anchor is linked. Let me know if you need help with the display.',
             sentAt: ago(0, 8),
             fromMerchant: false,
           ),
@@ -200,7 +200,7 @@ MerchantSnapshot demoFixtures(DateTime now) {
         messages: [
           ChatMessage(
             id: 'u1',
-            text: 'Are the refill essentials available in your shop?',
+            text: 'Are the refill essentials available at your anchor?',
             sentAt: ago(2, 12),
             fromMerchant: false,
           ),

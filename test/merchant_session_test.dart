@@ -7,6 +7,8 @@ import 'package:tagnar_merchant/features/auth/auth_repository.dart';
 import 'package:tagnar_merchant/features/auth/merchant_auth_gate.dart';
 import 'package:tagnar_merchant/features/auth/merchant_session_controller.dart';
 import 'package:tagnar_merchant/pages/widgets/dashboard_theme.dart';
+import 'package:tagnar_merchant/models/onboarding_details.dart';
+import 'package:tagnar_merchant/models/merchant.dart';
 
 const unverified = MerchantIdentity(
   uid: 'alice',
@@ -19,12 +21,11 @@ const verified = MerchantIdentity(
   email: 'aarav@example.test',
   verifiedPhone: '+919000000001',
 );
-const shop = MerchantShop(
-  id: 'shop-a',
-  name: 'Corner Market',
-  address: 'Baner Road, Pune',
-  status: 'approved',
-  anchorId: 'anchor-a',
+const anchor = MerchantAnchor(
+  id: 'anchor-a',
+  name: 'Building',
+  latitude: 18.4616,
+  longitude: 73.8818,
 );
 
 class FakeAuth implements MerchantAuthRepository {
@@ -65,28 +66,25 @@ class FakeAuth implements MerchantAuthRepository {
 }
 
 class FakeAccess implements MerchantAccessRepository {
-  final stream = StreamController<ShopAccessSnapshot>.broadcast();
-  Completer<ApprovedAnchor>? anchorResult;
-  bool deny = false;
+  final stream = StreamController<AnchorAccessSnapshot>.broadcast();
+  bool profileCompleted = true;
   int profiles = 0;
   @override
-  Future<void> ensureProfile(MerchantIdentity identity) async {
+  Future<MerchantProfile> ensureProfile(MerchantIdentity identity) async {
     profiles++;
+    return MerchantProfile(
+      onboardingCompleted: profileCompleted,
+      details: const OnboardingDetails(),
+    );
   }
 
   @override
-  Stream<ShopAccessSnapshot> watchShops(String uid) => stream.stream;
-  @override
-  Stream<ApprovedAnchor?> watchApprovedAnchor({
-    required String uid,
-    required MerchantShop shop,
-  }) async* {
-    if (deny) throw const AccessFailure('Permission denied');
-    yield await (anchorResult?.future ??
-        Future.value(
-          ApprovedAnchor(id: shop.anchorId!, shopId: shop.id, merchantId: uid),
-        ));
+  Future<void> saveOnboarding(String uid, OnboardingDetails details) async {
+    profileCompleted = true;
   }
+
+  @override
+  Stream<AnchorAccessSnapshot> watchAnchors(String uid) => stream.stream;
 }
 
 Future<void> tick() => Future<void>.delayed(Duration.zero);
@@ -105,17 +103,20 @@ void main() {
     await access.stream.close();
   });
 
-  test('Google sign-in alone never opens merchant access', () async {
-    auth.stream.add(unverified);
-    await tick();
-    expect(controller.identity!.hasVerifiedPhone, isFalse);
-    expect(access.profiles, 0);
-    await controller.sendCode('+919000000001');
-    await controller.verifyCode('654321');
-    await tick();
-    expect(controller.identity!.uid, 'alice');
-    expect(access.profiles, 1);
-  });
+  test(
+    'Google sign-in saves the profile but never opens merchant access',
+    () async {
+      auth.stream.add(unverified);
+      await tick();
+      expect(controller.identity!.hasVerifiedPhone, isFalse);
+      expect(access.profiles, 1);
+      await controller.sendCode('+919000000001');
+      await controller.verifyCode('654321');
+      await tick();
+      expect(controller.identity!.uid, 'alice');
+      expect(access.profiles, 2);
+    },
+  );
   test('demo code is not treated as a real SMS code and retry works', () async {
     auth.stream.add(unverified);
     await tick();
@@ -154,82 +155,61 @@ void main() {
     await tick();
     expect(controller.identity!.hasVerifiedPhone, isTrue);
   });
-  test('server approval opens anchor; cache-only data clears access', () async {
+  test('server anchor opens access; cache-only data clears access', () async {
     auth.stream.add(verified);
     await tick();
-    access.stream.add(const ShopAccessSnapshot([shop], serverConfirmed: true));
+    access.stream.add(
+      const AnchorAccessSnapshot([anchor], serverConfirmed: true),
+    );
     await tick();
-    expect(controller.anchor?.id, 'anchor-a');
-    access.stream.add(const ShopAccessSnapshot([shop], serverConfirmed: false));
+    expect(controller.selectedAnchor?.id, 'anchor-a');
+    access.stream.add(
+      const AnchorAccessSnapshot([anchor], serverConfirmed: false),
+    );
     await tick();
-    expect(controller.anchor, isNull);
-    expect(controller.shops, isEmpty);
+    expect(controller.selectedAnchor, isNull);
+    expect(controller.anchors, isEmpty);
   });
-  test('old account anchor response is ignored after sign-out', () async {
+  test('anchor access is cleared after sign-out', () async {
     auth.stream.add(verified);
     await tick();
-    access.anchorResult = Completer<ApprovedAnchor>();
-    access.stream.add(const ShopAccessSnapshot([shop], serverConfirmed: true));
+    access.stream.add(
+      const AnchorAccessSnapshot([anchor], serverConfirmed: true),
+    );
     await tick();
     await controller.signOut();
     await tick();
-    access.anchorResult!.complete(
-      const ApprovedAnchor(
-        id: 'anchor-a',
-        shopId: 'shop-a',
-        merchantId: 'alice',
-      ),
+    expect(controller.selectedAnchor, isNull);
+    expect(controller.anchors, isEmpty);
+  });
+  test('anchor revocation never retains active access', () async {
+    auth.stream.add(verified);
+    await tick();
+    access.stream.add(
+      const AnchorAccessSnapshot([anchor], serverConfirmed: true),
     );
     await tick();
-    expect(controller.anchor, isNull);
-    expect(controller.shops, isEmpty);
+    access.stream.add(const AnchorAccessSnapshot([], serverConfirmed: true));
+    await tick();
+    expect(controller.selectedAnchor, isNull);
+    expect(controller.anchors, isEmpty);
   });
-  test(
-    'revocation, access errors and unapproved shops never retain active access',
-    () async {
-      auth.stream.add(verified);
-      await tick();
-      access.stream.add(
-        const ShopAccessSnapshot([shop], serverConfirmed: true),
-      );
-      await tick();
-      access.stream.add(const ShopAccessSnapshot([], serverConfirmed: true));
-      await tick();
-      expect(controller.anchor, isNull);
-      access.deny = true;
-      access.stream.add(
-        const ShopAccessSnapshot([shop], serverConfirmed: true),
-      );
-      await tick();
-      expect(controller.anchor, isNull);
-      expect(controller.accessError, 'Permission denied');
-    },
-  );
-  test(
-    '100 approved shops and switching use the selected shop anchor',
-    () async {
-      auth.stream.add(verified);
-      await tick();
-      final shops = List.generate(
-        100,
-        (i) => MerchantShop(
-          id: 'shop-$i',
-          name: 'Shop $i',
-          address: 'Pune India',
-          status: 'approved',
-          anchorId: 'anchor-$i',
-        ),
-      );
-      access.stream.add(ShopAccessSnapshot(shops, serverConfirmed: true));
-      await tick();
-      await controller.selectShop(shops.last);
-      expect(controller.shops.length, 100);
-      expect(controller.anchor?.id, 'anchor-99');
-    },
-  );
+  test('100 anchors and switching use the selected anchor', () async {
+    auth.stream.add(verified);
+    await tick();
+    final anchors = List.generate(
+      100,
+      (i) => MerchantAnchor(id: 'anchor-$i', name: 'Anchor $i'),
+    );
+    access.stream.add(AnchorAccessSnapshot(anchors, serverConfirmed: true));
+    await tick();
+    controller.selectAnchor(anchors.last);
+    expect(controller.anchors.length, 100);
+    expect(controller.selectedAnchor?.id, 'anchor-99');
+  });
 
   testWidgets(
-    'live UI requires Google then consent and SMS, and waits for Master assignment',
+    'live UI requires Google, SMS and onboarding before anchor access',
     (tester) async {
       // This widget owns its own controller; the fixture controller remains idle.
       await tester.pumpWidget(
@@ -239,6 +219,7 @@ void main() {
         ),
       );
       auth.stream.add(null);
+      access.profileCompleted = false;
       await tester.pumpAndSettle();
       await tester.tap(find.text('Continue with Google'));
       await tester.pumpAndSettle();
@@ -266,12 +247,37 @@ void main() {
       await tester.tap(find.text('Verify phone'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      access.stream.add(const ShopAccessSnapshot([], serverConfirmed: true));
+      expect(find.text('Complete your merchant profile'), findsOneWidget);
+      for (final label in [
+        'Business name',
+        'Business address',
+        'GST number',
+        'City',
+        'State',
+        'Country',
+        'Postal code',
+      ]) {
+        final field = find.widgetWithText(TextFormField, label);
+        await tester.ensureVisible(field);
+        await tester.enterText(field, 'Valid value');
+      }
+      final businessType = find.byType(DropdownButtonFormField<BusinessType>);
+      await tester.ensureVisible(businessType);
+      await tester.tap(businessType);
       await tester.pumpAndSettle();
-      expect(
-        find.text('Waiting for a Master to assign your shops'),
-        findsOneWidget,
+      await tester.tap(find.text('Sole proprietorship').last);
+      await tester.pumpAndSettle();
+      final save = find.text('Save and continue');
+      await tester.scrollUntilVisible(
+        save,
+        200,
+        scrollable: find.byType(Scrollable).last,
       );
+      await tester.tap(save);
+      await tester.pump();
+      access.stream.add(const AnchorAccessSnapshot([], serverConfirmed: true));
+      await tester.pumpAndSettle();
+      expect(find.text('No anchor linked to this merchant'), findsOneWidget);
       expect(find.text('alice'), findsOneWidget);
       expect(find.text('DEMO MODE · Sample data, saved locally'), findsNothing);
       await tester.pumpWidget(const SizedBox());

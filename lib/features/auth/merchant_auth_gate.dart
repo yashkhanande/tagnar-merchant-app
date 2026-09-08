@@ -6,6 +6,7 @@ import '../access/access_repository.dart';
 import '../access/live_merchant_shell.dart';
 import 'auth_repository.dart';
 import 'merchant_session_controller.dart';
+import '../onboarding/merchant_onboarding_page.dart';
 
 class MerchantAuthGate extends StatefulWidget {
   const MerchantAuthGate({super.key, required this.auth, required this.access});
@@ -49,7 +50,44 @@ class _MerchantAuthGateState extends State<MerchantAuthGate>
       if (c.starting) {
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
-      if (c.identity?.hasVerifiedPhone == true && !c.signingOut) {
+      if (c.identity != null && c.loadingProfile) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      if (c.identity != null && !c.profileLoaded) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Tagnar Merchant'),
+            actions: [
+              TextButton(onPressed: c.signOut, child: const Text('Sign out')),
+            ],
+          ),
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: EmptyState(
+                  title: 'Merchant profile unavailable',
+                  message:
+                      c.accessError ?? 'Could not load your merchant profile.',
+                  icon: Icons.person_off_outlined,
+                  action: FilledButton(
+                    onPressed: c.refreshAccess,
+                    child: const Text('Try again'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+      if (c.identity?.hasVerifiedPhone == true &&
+          !c.onboardingCompleted &&
+          !c.signingOut) {
+        return MerchantOnboardingPage(controller: c);
+      }
+      if (c.identity?.hasVerifiedPhone == true &&
+          c.onboardingCompleted &&
+          !c.signingOut) {
         return LiveMerchantShell(controller: c);
       }
       return Scaffold(
@@ -70,7 +108,7 @@ class _MerchantAuthGateState extends State<MerchantAuthGate>
                 const SectionTitle(
                   'Welcome to your merchant workspace',
                   subtitle:
-                      'Sign in, verify your phone and connect your shops.',
+                      'Sign in, verify your phone and connect your anchor.',
                 ),
                 const DashboardCard(
                   child: Column(
@@ -79,7 +117,7 @@ class _MerchantAuthGateState extends State<MerchantAuthGate>
                       Icon(Icons.storefront_outlined, size: 48),
                       SizedBox(height: 20),
                       Text(
-                        'Your shops. One merchant account.',
+                        'Your anchor. One merchant account.',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
@@ -87,7 +125,7 @@ class _MerchantAuthGateState extends State<MerchantAuthGate>
                       ),
                       SizedBox(height: 12),
                       Text(
-                        'Each shop anchor needs approval from a Tagnar Master before you can access it.',
+                        'Your anchor is connected through its merchantId field.',
                       ),
                     ],
                   ),

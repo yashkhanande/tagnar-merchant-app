@@ -3,9 +3,10 @@ class MerchantIdentity {
     required this.uid,
     required this.name,
     required this.email,
+    this.photoUrl = '',
     this.verifiedPhone,
   });
-  final String uid, name, email;
+  final String uid, name, email, photoUrl;
 
   /// Comes from a Firebase-issued ID token, never a profile document or input.
   final String? verifiedPhone;

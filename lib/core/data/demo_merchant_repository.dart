@@ -59,7 +59,7 @@ class DemoMerchantRepository implements MerchantRepository {
     );
     final read = List<String>.from(_saved['read'] as List? ?? []);
     return MerchantSnapshot(
-      profile: ShopProfile(
+      profile: AnchorProfile(
         phone: _saved['phone'] as String? ?? _seed.profile.phone,
         phoneConfirmed: _saved['phone'] != null,
       ),

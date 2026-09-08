@@ -41,7 +41,7 @@ class _RequestsPageState extends State<RequestsPage> {
       children: [
         const SectionTitle(
           'Brands & products',
-          subtitle: 'Discover proposals for your shop.',
+          subtitle: 'Discover proposals for your anchor.',
         ),
         TextField(
           controller: _search,

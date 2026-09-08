@@ -84,7 +84,7 @@ class _OfferDialogState extends State<OfferDialog> {
                   'Expires',
                   '${dateLabel(offer.expiresAt)} · ${timeLabel(offer.expiresAt)}',
                 ),
-                DetailLine('Shop anchor', c.data!.profile.anchorId),
+                DetailLine('Anchor', c.data!.profile.anchorId),
                 if (decision != null)
                   const Notice(
                     'Response saved on this device. You cannot respond again.',

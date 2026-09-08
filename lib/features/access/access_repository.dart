@@ -1,49 +1,48 @@
 import '../auth/auth_repository.dart';
+import '../../models/onboarding_details.dart';
 
-class MerchantShop {
-  const MerchantShop({
+class MerchantProfile {
+  const MerchantProfile({
+    required this.onboardingCompleted,
+    required this.details,
+  });
+  final bool onboardingCompleted;
+  final OnboardingDetails details;
+}
+
+class MerchantAnchor {
+  const MerchantAnchor({
     required this.id,
     required this.name,
-    required this.address,
-    required this.status,
-    this.anchorId,
+    this.latitude,
+    this.longitude,
   });
-  final String id, name, address, status;
-  final String? anchorId;
-  bool get approved =>
-      status == 'approved' && anchorId != null && anchorId!.isNotEmpty;
-  factory MerchantShop.fromMap(String id, Map<String, dynamic> data) =>
-      MerchantShop(
+  final String id, name;
+  final double? latitude, longitude;
+  String get location => latitude == null || longitude == null
+      ? 'Location not provided'
+      : '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}';
+  factory MerchantAnchor.fromMap(String id, Map<String, dynamic> data) =>
+      MerchantAnchor(
         id: id,
-        name: data['name'] as String? ?? '',
-        address: data['address'] as String? ?? '',
-        status: data['status'] as String? ?? 'pending',
-        anchorId: data['anchorId'] as String?,
+        name: (data['prefabName'] as String?)?.trim().isNotEmpty == true
+            ? data['prefabName'] as String
+            : 'Anchor ${id.substring(0, id.length < 8 ? id.length : 8)}',
+        latitude: (data['latitude'] as num?)?.toDouble(),
+        longitude: (data['longitude'] as num?)?.toDouble(),
       );
 }
 
-class ShopAccessSnapshot {
-  const ShopAccessSnapshot(this.shops, {required this.serverConfirmed});
-  final List<MerchantShop> shops;
+class AnchorAccessSnapshot {
+  const AnchorAccessSnapshot(this.anchors, {required this.serverConfirmed});
+  final List<MerchantAnchor> anchors;
   final bool serverConfirmed;
 }
 
-class ApprovedAnchor {
-  const ApprovedAnchor({
-    required this.id,
-    required this.shopId,
-    required this.merchantId,
-  });
-  final String id, shopId, merchantId;
-}
-
 abstract interface class MerchantAccessRepository {
-  Future<void> ensureProfile(MerchantIdentity identity);
-  Stream<ShopAccessSnapshot> watchShops(String uid);
-  Stream<ApprovedAnchor?> watchApprovedAnchor({
-    required String uid,
-    required MerchantShop shop,
-  });
+  Future<MerchantProfile> ensureProfile(MerchantIdentity identity);
+  Future<void> saveOnboarding(String uid, OnboardingDetails details);
+  Stream<AnchorAccessSnapshot> watchAnchors(String uid);
 }
 
 class AccessFailure implements Exception {

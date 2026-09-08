@@ -4,28 +4,22 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../merchant_repository.dart';
 import '../models.dart';
 
-/// Firestore-backed merchant data scoped to one server-approved shop/anchor.
+/// Firestore-backed merchant data scoped to one merchant-owned anchor.
 class FirestoreMerchantRepository implements MerchantRepository {
   FirestoreMerchantRepository({
     required this.firestore,
     required this.auth,
     required this.merchantId,
     required this.merchantName,
-    required this.shopId,
-    required this.shopName,
-    required this.shopAddress,
     required this.anchorId,
+    required this.anchorName,
+    required this.anchorLocation,
     required this.phone,
   });
 
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
-  final String merchantId,
-      merchantName,
-      shopId,
-      shopName,
-      shopAddress,
-      anchorId;
+  final String merchantId, merchantName, anchorId, anchorName, anchorLocation;
   final String phone;
 
   void _checkSession() {
@@ -35,10 +29,10 @@ class FirestoreMerchantRepository implements MerchantRepository {
     }
   }
 
-  Query<Map<String, dynamic>> _forShop(String collection) => firestore
+  Query<Map<String, dynamic>> _forAnchor(String collection) => firestore
       .collection(collection)
       .where('merchantId', isEqualTo: merchantId)
-      .where('shopId', isEqualTo: shopId);
+      .where('anchorId', isEqualTo: anchorId);
 
   @override
   Future<MerchantSnapshot> load({
@@ -47,19 +41,19 @@ class FirestoreMerchantRepository implements MerchantRepository {
     _checkSession();
     try {
       final results = await Future.wait([
-        _forShop(
+        _forAnchor(
           'merchant_requests',
         ).get(const GetOptions(source: Source.server)),
-        _forShop(
+        _forAnchor(
           'merchant_offers',
         ).get(const GetOptions(source: Source.server)),
-        _forShop(
+        _forAnchor(
           'merchant_payments',
         ).get(const GetOptions(source: Source.server)),
-        _forShop(
+        _forAnchor(
           'merchant_interactions',
         ).get(const GetOptions(source: Source.server)),
-        _forShop(
+        _forAnchor(
           'merchant_conversations',
         ).get(const GetOptions(source: Source.server)),
       ]).timeout(const Duration(seconds: 25));
@@ -94,12 +88,12 @@ class FirestoreMerchantRepository implements MerchantRepository {
       });
 
       return MerchantSnapshot(
-        profile: ShopProfile(
+        profile: AnchorProfile(
           merchantId: merchantId,
           name: merchantName,
-          shop: shopName,
+          anchorName: anchorName,
           anchorId: anchorId,
-          address: shopAddress,
+          location: anchorLocation,
           phone: phone,
           phoneConfirmed: true,
         ),
@@ -114,10 +108,10 @@ class FirestoreMerchantRepository implements MerchantRepository {
     } on MerchantException {
       rethrow;
     } on FormatException catch (e) {
-      throw MerchantException('Some shop data is invalid: ${e.message}');
+      throw MerchantException('Some anchor data is invalid: ${e.message}');
     } catch (_) {
       throw const MerchantException(
-        'Could not load shop data. Check your connection and try again.',
+        'Could not load anchor data. Check your connection and try again.',
       );
     }
   }
@@ -133,7 +127,7 @@ class FirestoreMerchantRepository implements MerchantRepository {
             final data = snapshot.data();
             if (data == null ||
                 data['merchantId'] != merchantId ||
-                data['shopId'] != shopId) {
+                data['anchorId'] != anchorId) {
               throw const MerchantException('Offer not found.');
             }
             if (data['decision'] != null) {
@@ -174,7 +168,7 @@ class FirestoreMerchantRepository implements MerchantRepository {
       final data = current.data();
       if (data == null ||
           data['merchantId'] != merchantId ||
-          data['shopId'] != shopId) {
+          data['anchorId'] != anchorId) {
         throw const MerchantException('Conversation not found.');
       }
       await conversation.collection('messages').add({
@@ -319,12 +313,12 @@ class FirestoreMerchantRepository implements MerchantRepository {
 
   static String _firebaseMessage(String code) => switch (code) {
     'permission-denied' =>
-      'You no longer have access to this shop data. Refresh access or contact your Master.',
+      'You no longer have access to this anchor data. Refresh access or contact support.',
     'unavailable' || 'deadline-exceeded' =>
-      'Shop data is temporarily unavailable. Check your connection and try again.',
+      'Anchor data is temporarily unavailable. Check your connection and try again.',
     'failed-precondition' =>
-      'Firebase needs an index for this shop query. Ask the administrator to deploy the required indexes.',
+      'Firebase needs an index for this anchor query. Ask the administrator to deploy the required indexes.',
     'not-found' => 'The merchant database or record is not available.',
-    _ => 'Could not load or save shop data. Please try again.',
+    _ => 'Could not load or save anchor data. Please try again.',
   };
 }

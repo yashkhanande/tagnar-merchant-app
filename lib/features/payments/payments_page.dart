@@ -104,7 +104,7 @@ class PaymentTile extends StatelessWidget {
         ),
         DetailLine('Description', payment.description),
         DetailLine('Method', payment.method),
-        DetailLine('Shop anchor', anchorId),
+        DetailLine('Anchor', anchorId),
         const Notice(
           'Sample record. Status comes from demo data; it cannot be changed here.',
         ),

@@ -19,7 +19,7 @@ class MerchantProfilePage extends StatelessWidget {
       children: [
         const SectionTitle(
           'Your merchant profile',
-          subtitle: 'One merchant, one shop anchor.',
+          subtitle: 'Your merchant anchor.',
         ),
         DashboardCard(
           child: Column(
@@ -34,14 +34,14 @@ class MerchantProfilePage extends StatelessWidget {
                 profile.name,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
-              DetailLine('Shop', profile.shop),
-              DetailLine('Location', profile.address),
+              DetailLine('Anchor', profile.anchorName),
+              DetailLine('Location', profile.location),
               DetailLine('Merchant ID', profile.merchantId),
               DetailLine('Associated anchor', profile.anchorId),
               Notice(
                 live
-                    ? 'This shop and anchor assignment was verified by Firebase.'
-                    : 'This demo merchant has exactly one fixed shop anchor.',
+                    ? 'This anchor assignment was verified by Firebase.'
+                    : 'This demo merchant has one fixed anchor.',
               ),
             ],
           ),
@@ -89,8 +89,8 @@ class MerchantProfilePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: live
                 ? const [
-                    DetailLine('Source', 'Firebase · tagnar-merchant database'),
-                    DetailLine('Scope', 'Selected approved shop only'),
+                    DetailLine('Source', 'Firebase · default database'),
+                    DetailLine('Scope', 'Selected merchant anchor only'),
                     Notice(
                       'Missing records appear as empty states. Connection and access errors can be retried with Refresh.',
                     ),

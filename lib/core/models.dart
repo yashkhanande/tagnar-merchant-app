@@ -14,17 +14,17 @@ extension DisplayLabel on Enum {
   String get label => '${name[0].toUpperCase()}${name.substring(1)}';
 }
 
-class ShopProfile {
-  const ShopProfile({
+class AnchorProfile {
+  const AnchorProfile({
     this.merchantId = 'merchant-demo-001',
     this.name = 'Aarav Shah',
-    this.shop = 'Corner Market',
+    this.anchorName = 'Building',
     this.anchorId = 'ANCHOR-PN-0142',
-    this.address = 'Baner Road, Pune, Maharashtra',
+    this.location = 'Baner, Pune, Maharashtra',
     this.phone = '+919876543210',
     this.phoneConfirmed = false,
   });
-  final String merchantId, name, shop, anchorId, address, phone;
+  final String merchantId, name, anchorName, anchorId, location, phone;
   final bool phoneConfirmed;
 }
 
@@ -158,7 +158,7 @@ class MerchantSnapshot {
        payments = List.unmodifiable(payments),
        interactions = List.unmodifiable(interactions),
        conversations = List.unmodifiable(conversations);
-  final ShopProfile profile;
+  final AnchorProfile profile;
   final List<MerchantRequest> requests;
   final List<MerchantOffer> offers;
   final List<PaymentRecord> payments;

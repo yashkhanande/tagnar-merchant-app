@@ -109,12 +109,12 @@ void main() {
   test('local chat send/read persists and validates input', () async {
     final store = MemoryDemoStore();
     final repository = repo(store);
-    await repository.sendMessage('chat-brand', '  Hello from my shop  ');
+    await repository.sendMessage('chat-brand', '  Hello from my anchor  ');
     await repository.markConversationRead('chat-brand');
     final data = await repo(store).load();
     final chat = data.conversations.first;
     expect(chat.unread, 0);
-    expect(chat.messages.last.text, 'Hello from my shop');
+    expect(chat.messages.last.text, 'Hello from my anchor');
     expect(chat.messages.last.fromMerchant, isTrue);
     expect(data.conversations[1].unread, 1);
     await expectLater(

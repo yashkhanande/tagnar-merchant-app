@@ -26,6 +26,7 @@ class FirebaseMerchantAuthRepository implements MerchantAuthRepository {
           uid: user.uid,
           name: user.displayName ?? 'Merchant',
           email: user.email ?? '',
+          photoUrl: user.photoURL ?? '',
           verifiedPhone: token.claims?['phone_number'] as String?,
         );
       });

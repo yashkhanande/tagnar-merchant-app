@@ -16,12 +16,10 @@ class MerchantShell extends StatefulWidget {
     super.key,
     required this.repository,
     this.live = false,
-    this.onChooseShop,
     this.onSignOut,
   });
   final MerchantRepository repository;
   final bool live;
-  final VoidCallback? onChooseShop;
   final VoidCallback? onSignOut;
   @override
   State<MerchantShell> createState() => _MerchantShellState();
@@ -84,12 +82,6 @@ class _MerchantShellState extends State<MerchantShell> {
                   ),
                 ],
               ),
-            if (widget.live && widget.onChooseShop != null)
-              IconButton(
-                tooltip: 'Choose another shop',
-                onPressed: widget.onChooseShop,
-                icon: const Icon(Icons.storefront_outlined),
-              ),
             if (widget.live && widget.onSignOut != null)
               IconButton(
                 tooltip: 'Sign out',
@@ -111,7 +103,7 @@ class _MerchantShellState extends State<MerchantShell> {
                 ),
                 child: Text(
                   widget.live
-                      ? 'LIVE · Firebase data for the selected shop'
+                      ? 'LIVE · Firebase data for the selected anchor'
                       : c.scenario == DemoScenario.normal
                       ? 'DEMO MODE · Sample data, saved locally'
                       : 'DEMO MODE · ${c.scenario.label} state preview',
@@ -131,8 +123,8 @@ class _MerchantShellState extends State<MerchantShell> {
                             const SizedBox(height: 16),
                             Text(
                               widget.live
-                                  ? 'Loading your shop…'
-                                  : 'Loading your demo shop…',
+                                  ? 'Loading your anchor…'
+                                  : 'Loading your demo anchor…',
                             ),
                           ],
                         ),
@@ -141,7 +133,7 @@ class _MerchantShellState extends State<MerchantShell> {
                     ? FeatureList(
                         children: [
                           EmptyState(
-                            title: 'Could not load your shop',
+                            title: 'Could not load your anchor',
                             message: c.error!,
                             icon: Icons.cloud_off_outlined,
                             action: FilledButton(

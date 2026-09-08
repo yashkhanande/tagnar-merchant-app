@@ -1,9 +1,12 @@
 # Tagnar Merchant
 
-The default app uses Firebase Authentication and the named `tagnar-merchant`
-Firestore database. After Google sign-in, phone verification, and shop approval,
-the dashboard, requests, offers, payments, analytics, and chats load records for
-the selected shop. It never substitutes demo records when Firebase data is absent.
+The default app uses Firebase Authentication and the project's default
+Firestore database. Google sign-in creates or refreshes
+`merchants_new/{firebaseUid}`. The merchant then verifies their phone and must
+complete the business onboarding form before anchors are fetched by matching
+their `merchantId`. The
+dashboard, requests, offers, payments, analytics, and chats load records for the
+selected anchor. It never substitutes demo records when Firebase data is absent.
 
 ## Run it from Android Studio
 
@@ -34,9 +37,16 @@ flutter run -t lib/main_demo.dart
 
 ## Firestore data shape
 
+Merchant profiles live in `merchants_new/{firebaseUid}`. Authentication writes
+`uid`, `name`, `email`, `photoUrl`, optional verified `phoneNumber`, `createdAt`,
+`lastLogin`, and `updatedAt`. Onboarding adds `businessName`, `businessAddress`,
+`businessType`, `businessPhone`, `businessEmail`, `gstNumber`, `city`, `state`,
+`country`, `postalCode`, and `onboardingCompleted`. All client profile writes are
+restricted to the authenticated merchant's own UID.
+
 Operational documents are stored in `merchant_requests`, `merchant_offers`,
 `merchant_payments`, `merchant_interactions`, and `merchant_conversations`.
-Every document must contain the approved `merchantId` and `shopId`. Conversation
+Every document must contain the `merchantId` and `anchorId`. Conversation
 messages live under `merchant_conversations/{conversationId}/messages`.
 
 The adapter accepts Firestore timestamps (or ISO strings) and expects the enum
@@ -73,7 +83,7 @@ the prompts. No external console setup is needed for the demo.
 
 ## Check the demo
 
-- **Dashboard:** shows the linked shop, payment totals, pending requests, active
+- **Dashboard:** shows the linked anchor, payment totals, pending requests, active
   offers, sample interactions, and recent payments. Tap a metric or the analytics
   button to explore further.
 - **Requests:** search a brand, product, category, or request ID. Combine type and
@@ -92,7 +102,7 @@ the prompts. No external console setup is needed for the demo.
 - **Chats:** filter Brands, Masters, or Users; open a conversation to clear its
   unread count. Type a message and press Send. Messages are marked Local, retained
   after restarting, and never delivered to another person.
-- **Profile:** shows the single fixed shop/anchor. Open **Confirm phone number**,
+- **Profile:** shows the single fixed anchor. Open **Confirm phone number**,
   enter a number including `+` and country code, and tap **Get demo code**. Enter
   `123456` and tap **Confirm demo code**. Try an incorrect code first to see the
   error. Codes expire after five minutes. No SMS is sent; this is not real

@@ -15,8 +15,6 @@ import 'features/shell/merchant_shell.dart';
 import 'firebase_options.dart';
 import 'pages/widgets/dashboard_theme.dart';
 
-const merchantDatabaseId = 'tagnar-merchant';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Widget home;
@@ -31,10 +29,7 @@ Future<void> main() async {
     if (kDebugMode && defaultTargetPlatform == TargetPlatform.android) {
       await FirebaseAuth.instance.setSettings(forceRecaptchaFlow: true);
     }
-    final firestore = FirebaseFirestore.instanceFor(
-      app: Firebase.app(),
-      databaseId: merchantDatabaseId,
-    );
+    final firestore = FirebaseFirestore.instanceFor(app: Firebase.app());
     firestore.settings = const Settings(persistenceEnabled: false);
     home = MerchantAuthGate(
       auth: FirebaseMerchantAuthRepository(auth: FirebaseAuth.instance),

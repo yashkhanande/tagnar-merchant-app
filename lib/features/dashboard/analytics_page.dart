@@ -28,7 +28,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         child: FeatureList(
           children: [
             const SectionTitle(
-              'Understand your shop',
+              'Understand your anchor',
               subtitle: 'See how people explore your anchor.',
             ),
             const Notice(

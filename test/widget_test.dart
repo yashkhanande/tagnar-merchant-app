@@ -24,7 +24,7 @@ Future<void> launch(
       ),
     ),
   );
-  expect(find.text('Loading your demo shop…'), findsOneWidget);
+  expect(find.text('Loading your demo anchor…'), findsOneWidget);
   await tester.pumpAndSettle();
 }
 
@@ -236,7 +236,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Preview error state'));
     await tester.pumpAndSettle();
-    expect(find.text('Could not load your shop'), findsOneWidget);
+    expect(find.text('Could not load your anchor'), findsOneWidget);
     await tester.tap(find.text('Try again'));
     await tester.pumpAndSettle();
     expect(find.text('Hello, Aarav'), findsOneWidget);

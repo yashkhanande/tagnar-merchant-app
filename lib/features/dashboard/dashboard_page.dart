@@ -38,7 +38,7 @@ class MerchantDashboardPage extends StatelessWidget {
     return FeatureList(
       children: [
         const Text(
-          'YOUR SHOP, AT A GLANCE',
+          'YOUR ANCHOR, AT A GLANCE',
           style: TextStyle(
             color: DashboardTheme.accent,
             letterSpacing: 1.8,
@@ -48,7 +48,7 @@ class MerchantDashboardPage extends StatelessWidget {
         ),
         SectionTitle(
           'Hello, ${data.profile.name.split(' ').first}',
-          subtitle: '${data.profile.shop} · Pune',
+          subtitle: data.profile.anchorName,
         ),
         DashboardCard(
           child: Column(
@@ -63,7 +63,7 @@ class MerchantDashboardPage extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      data.profile.shop,
+                      data.profile.anchorName,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
@@ -72,7 +72,7 @@ class MerchantDashboardPage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'One shop. One anchor.\n${data.profile.anchorId}',
+                'Merchant anchor\n${data.profile.anchorId}',
                 style: const TextStyle(
                   color: DashboardTheme.secondary,
                   height: 1.6,
