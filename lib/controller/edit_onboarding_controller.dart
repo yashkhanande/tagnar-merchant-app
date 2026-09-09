@@ -69,6 +69,15 @@ class EditOnboardingController extends GetxController {
         : null;
   }
 
+  String? optionalEmail(String? value) {
+    final email = value?.trim() ?? '';
+    if (email.isEmpty) return null;
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+      return 'Enter a valid email address or leave it blank.';
+    }
+    return null;
+  }
+
   String? requiredBusinessType(BusinessType? value) {
     return value == null || value == BusinessType.none
         ? 'This field is required.'

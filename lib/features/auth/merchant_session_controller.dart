@@ -9,7 +9,7 @@ class MerchantSessionController extends GetxController {
   final MerchantAuthRepository auth;
   final MerchantAccessRepository access;
   MerchantIdentity? identity;
-  bool starting = true, signingIn = false, signingOut = false;
+  bool starting = true, signingOut = false;
   bool sendingCode = false, verifyingCode = false, codeSent = false;
   bool loadingAnchors = false;
   bool loadingProfile = false, savingOnboarding = false;
@@ -63,26 +63,9 @@ class MerchantSessionController extends GetxController {
       cancelPhone();
       _clearAccess();
       error = null;
-      if (next != null) _connectProfile();
+      if (next?.hasVerifiedPhone == true) _connectProfile();
     }
     update();
-  }
-
-  Future<void> signIn() async {
-    if (signingIn) return;
-    signingIn = true;
-    error = null;
-    update();
-    try {
-      await auth.signInWithGoogle();
-    } catch (e) {
-      if (!isClosed) error = message(e);
-    } finally {
-      if (!isClosed) {
-        signingIn = false;
-        update();
-      }
-    }
   }
 
   Future<void> sendCode(String phone, {bool resend = false}) async {

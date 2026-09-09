@@ -1,3 +1,4 @@
+import 'package:country_state_city/country_state_city.dart' as csc;
 import 'package:flutter/material.dart';
 
 import '../../models/merchant.dart';
@@ -18,6 +19,17 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
   final _formKey = GlobalKey<FormState>();
   late final Map<String, TextEditingController> _fields;
   BusinessType _businessType = BusinessType.none;
+  List<csc.Country> _countries = const [];
+  List<csc.State> _states = const [];
+  List<csc.City> _cities = const [];
+  String? _country;
+  String? _state;
+  String? _city;
+  bool _loadingCountries = true;
+  bool _loadingStates = false;
+  bool _loadingCities = false;
+  String? _locationError;
+  int _locationRequest = 0;
 
   @override
   void initState() {
@@ -25,6 +37,9 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
     final details = widget.controller.onboardingDetails;
     final identity = widget.controller.identity!;
     _businessType = details.businessType;
+    _country = details.country.isEmpty ? null : details.country;
+    _state = details.state.isEmpty ? null : details.state;
+    _city = details.city.isEmpty ? null : details.city;
     _fields = {
       'businessName': TextEditingController(text: details.businessName),
       'businessAddress': TextEditingController(text: details.businessAddress),
@@ -39,11 +54,9 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
             : details.businessEmail,
       ),
       'gstNumber': TextEditingController(text: details.gstNumber),
-      'city': TextEditingController(text: details.city),
-      'state': TextEditingController(text: details.state),
-      'country': TextEditingController(text: details.country),
       'postalCode': TextEditingController(text: details.postalCode),
     };
+    _loadLocations();
   }
 
   @override
@@ -57,9 +70,139 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
   String? _required(String? value) =>
       value == null || value.trim().isEmpty ? 'This field is required.' : null;
 
+  String? _optionalEmail(String? value) {
+    final email = value?.trim() ?? '';
+    if (email.isEmpty) return null;
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+      return 'Enter a valid email address or leave it blank.';
+    }
+    return null;
+  }
+
+  T? _byName<T>(List<T> values, String? name, String Function(T) readName) {
+    if (name == null) return null;
+    final normalized = name.trim().toLowerCase();
+    for (final value in values) {
+      if (readName(value).toLowerCase() == normalized) return value;
+    }
+    return null;
+  }
+
+  Future<void> _loadLocations() async {
+    final request = ++_locationRequest;
+    setState(() {
+      _loadingCountries = true;
+      _locationError = null;
+    });
+    try {
+      final countries = await csc.getAllCountries();
+      if (!mounted || request != _locationRequest) return;
+      final selectedCountry = _byName(
+        countries,
+        _country,
+        (country) => country.name,
+      );
+      var states = <csc.State>[];
+      var cities = <csc.City>[];
+      csc.State? selectedState;
+      if (selectedCountry != null) {
+        states = await csc.getStatesOfCountry(selectedCountry.isoCode);
+        selectedState = _byName(states, _state, (state) => state.name);
+        if (selectedState != null) {
+          cities = await csc.getStateCities(
+            selectedCountry.isoCode,
+            selectedState.isoCode,
+          );
+        }
+      }
+      if (!mounted || request != _locationRequest) return;
+      setState(() {
+        _countries = countries;
+        _states = states;
+        _cities = cities;
+        _country = selectedCountry?.name;
+        _state = selectedState?.name;
+        _city = _byName(cities, _city, (city) => city.name)?.name;
+        _loadingCountries = false;
+      });
+    } catch (_) {
+      if (!mounted || request != _locationRequest) return;
+      setState(() {
+        _loadingCountries = false;
+        _locationError = 'Could not load countries, states and cities.';
+      });
+    }
+  }
+
+  Future<void> _selectCountry(String? name) async {
+    final request = ++_locationRequest;
+    final country = _byName(_countries, name, (country) => country.name);
+    setState(() {
+      _country = country?.name;
+      _state = null;
+      _city = null;
+      _states = const [];
+      _cities = const [];
+      _loadingStates = country != null;
+      _loadingCities = false;
+      _locationError = null;
+    });
+    if (country == null) return;
+    try {
+      final states = await csc.getStatesOfCountry(country.isoCode);
+      if (!mounted || request != _locationRequest) return;
+      setState(() {
+        _states = states;
+        _loadingStates = false;
+      });
+    } catch (_) {
+      if (!mounted || request != _locationRequest) return;
+      setState(() {
+        _loadingStates = false;
+        _locationError = 'Could not load states for ${country.name}.';
+      });
+    }
+  }
+
+  Future<void> _selectState(String? name) async {
+    final request = ++_locationRequest;
+    final country = _byName(_countries, _country, (country) => country.name);
+    final state = _byName(_states, name, (state) => state.name);
+    setState(() {
+      _state = state?.name;
+      _city = null;
+      _cities = const [];
+      _loadingCities = country != null && state != null;
+      _locationError = null;
+    });
+    if (country == null || state == null) return;
+    try {
+      final cities = await csc.getStateCities(country.isoCode, state.isoCode);
+      if (!mounted || request != _locationRequest) return;
+      setState(() {
+        _cities = cities;
+        _loadingCities = false;
+      });
+    } catch (_) {
+      if (!mounted || request != _locationRequest) return;
+      setState(() {
+        _loadingCities = false;
+        _locationError = 'Could not load cities for ${state.name}.';
+      });
+    }
+  }
+
+  void _selectCity(String? name) {
+    final city = _byName(_cities, name, (city) => city.name);
+    setState(() => _city = city?.name);
+  }
+
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false) ||
-        _businessType == BusinessType.none) {
+        _businessType == BusinessType.none ||
+        _country == null ||
+        _state == null ||
+        _city == null) {
       setState(() {});
       return;
     }
@@ -72,9 +215,9 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
         businessPhone: _fields['businessPhone']!.text,
         businessEmail: _fields['businessEmail']!.text,
         gstNumber: _fields['gstNumber']!.text,
-        city: _fields['city']!.text,
-        state: _fields['state']!.text,
-        country: _fields['country']!.text,
+        city: _city!,
+        state: _state!,
+        country: _country!,
         postalCode: _fields['postalCode']!.text,
       ),
     );
@@ -172,10 +315,11 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
                           ),
                           _field(
                             'businessEmail',
-                            'Business email',
+                            'Business email (optional)',
                             Icons.email_outlined,
                             saving,
                             keyboard: TextInputType.emailAddress,
+                            validator: _optionalEmail,
                           ),
                           _field(
                             'gstNumber',
@@ -183,14 +327,65 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
                             Icons.receipt_long_outlined,
                             saving,
                           ),
-                          _field('city', 'City', Icons.location_city, saving),
-                          _field('state', 'State', Icons.map_outlined, saving),
-                          _field(
-                            'country',
+                          _locationDropdown(
                             'Country',
                             Icons.public_outlined,
-                            saving,
+                            _country,
+                            _countries.map((country) => country.name).toList(),
+                            saving || _loadingCountries,
+                            _selectCountry,
+                            helperText: _loadingCountries
+                                ? 'Loading countries…'
+                                : null,
                           ),
+                          _locationDropdown(
+                            'State',
+                            Icons.map_outlined,
+                            _state,
+                            _states.map((state) => state.name).toList(),
+                            saving || _country == null || _loadingStates,
+                            _selectState,
+                            helperText: _country == null
+                                ? 'Select a country first'
+                                : _loadingStates
+                                ? 'Loading states…'
+                                : null,
+                          ),
+                          _locationDropdown(
+                            'City',
+                            Icons.location_city,
+                            _city,
+                            _cities.map((city) => city.name).toList(),
+                            saving || _state == null || _loadingCities,
+                            _selectCity,
+                            helperText: _state == null
+                                ? 'Select a state first'
+                                : _loadingCities
+                                ? 'Loading cities…'
+                                : null,
+                          ),
+                          if (_locationError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _locationError!,
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.error,
+                                      ),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: saving ? null : _loadLocations,
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            ),
                           _field(
                             'postalCode',
                             'Postal code',
@@ -213,7 +408,13 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
                     ],
                     const SizedBox(height: 20),
                     FilledButton.icon(
-                      onPressed: saving ? null : _save,
+                      onPressed:
+                          saving ||
+                              _loadingCountries ||
+                              _loadingStates ||
+                              _loadingCities
+                          ? null
+                          : _save,
                       icon: saving
                           ? const SizedBox.square(
                               dimension: 18,
@@ -239,6 +440,7 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
     bool saving, {
     int maxLines = 1,
     TextInputType? keyboard,
+    FormFieldValidator<String>? validator,
     bool last = false,
   }) => Padding(
     padding: EdgeInsets.only(bottom: last ? 0 : 16),
@@ -247,12 +449,45 @@ class _MerchantOnboardingPageState extends State<MerchantOnboardingPage> {
       enabled: !saving,
       maxLines: maxLines,
       keyboardType: keyboard,
-      validator: _required,
+      validator: validator ?? _required,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
         border: const OutlineInputBorder(),
       ),
+    ),
+  );
+
+  Widget _locationDropdown(
+    String label,
+    IconData icon,
+    String? value,
+    List<String> values,
+    bool disabled,
+    ValueChanged<String?> onChanged, {
+    String? helperText,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: DropdownButtonFormField<String>(
+      key: ValueKey('$label:$value:${values.length}'),
+      initialValue: values.contains(value) ? value : null,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        helperText: helperText,
+        border: const OutlineInputBorder(),
+      ),
+      items: values
+          .map(
+            (item) => DropdownMenuItem(
+              value: item,
+              child: Text(item, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: disabled ? null : onChanged,
+      validator: _required,
     ),
   );
 

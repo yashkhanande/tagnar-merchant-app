@@ -1,9 +1,9 @@
 # Tagnar Merchant
 
 The default app uses Firebase Authentication and the project's default
-Firestore database. Google sign-in creates or refreshes
-`merchants_new/{firebaseUid}`. The merchant then verifies their phone and must
-complete the business onboarding form before anchors are fetched by matching
+Firestore database. SMS phone verification signs the merchant in and creates or
+refreshes `merchants_new/{firebaseUid}`. The merchant must then complete the
+business onboarding form before anchors are fetched by matching
 their `merchantId`. The
 dashboard, requests, offers, payments, analytics, and chats load records for the
 selected anchor. It never substitutes demo records when Firebase data is absent.
@@ -139,8 +139,9 @@ removes this app's local demo decisions, messages, and phone confirmation).
 ## Project layout
 
 ```text
-lib/main.dart                    Credential-free demo entry point
-lib/main_firebase.dart           Preserved previous Firebase entry point
+lib/main.dart                    Firebase phone-auth entry point
+lib/main_demo.dart               Credential-free demo entry point
+lib/main_firebase.dart           Alias for the default Firebase entry point
 lib/core/models.dart             Typed immutable display data
 lib/core/merchant_repository.dart Backend replacement boundary
 lib/core/data/                   Demo fixtures, repository, local storage
@@ -152,7 +153,7 @@ lib/features/chats/              Conversation list and local messaging
 lib/features/profile/            Single anchor profile and demo OTP
 lib/shared/widgets/              Reusable UI and date/status filters
 lib/pages/widgets/               Existing dashboard theme/card reused
-lib/controller/, lib/services/   Preserved existing Firebase architecture
+lib/controller/, lib/services/   Supporting Firebase architecture
 ```
 
 The only added dependency is `shared_preferences` 2.5.3, for device-local demo
@@ -162,12 +163,11 @@ production authority for offer decisions, authentication, or payments. Repositor
 writes are serialized and checked before updating the demo UI. Tests substitute
 an in-memory store and do not need native plugins or Firebase.
 
-The old Firebase flow is preserved in `lib/main_firebase.dart`; it is **not** the
-completed stages 2–5. Its Google sign-in/onboarding behavior and existing Firebase
-project are outside stage 1 verification. The default entry point does not
-initialize Firebase or call those services. Android's Google services Gradle
-plugin is applied only when `android/app/google-services.json` exists, so demo
-builds also work without that file.
+`lib/main_firebase.dart` remains as a backward-compatible alias for the default
+Firebase phone-auth entry point. The separate demo entry point does not initialize
+Firebase or call those services. Android's Google services Gradle plugin is
+applied only when `android/app/google-services.json` exists, so demo builds also
+work without that file.
 
 ## Repeat the checks
 

@@ -24,7 +24,6 @@ class PhoneEvent {
 
 abstract interface class MerchantAuthRepository {
   Stream<MerchantIdentity?> get identities;
-  Future<void> signInWithGoogle();
   Future<void> sendPhoneCode(
     String phone, {
     required void Function(PhoneEvent) onEvent,

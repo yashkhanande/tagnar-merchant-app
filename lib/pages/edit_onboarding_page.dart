@@ -162,12 +162,12 @@ class EditOnboardingPage extends GetView<EditOnboardingController> {
                                       const SizedBox(height: 18),
                                       DarkBlueTextField(
                                         controller: controller.businessEmail,
-                                        label: 'Business email',
+                                        label: 'Business email (optional)',
                                         prefixIcon: Icons.email_outlined,
                                         keyboardType:
                                             TextInputType.emailAddress,
                                         enabled: !saving,
-                                        validator: controller.requiredField,
+                                        validator: controller.optionalEmail,
                                       ),
                                       const SizedBox(height: 18),
                                       DarkBlueTextField(

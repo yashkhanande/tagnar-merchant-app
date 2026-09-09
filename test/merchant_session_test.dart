@@ -10,15 +10,10 @@ import 'package:tagnar_merchant/pages/widgets/dashboard_theme.dart';
 import 'package:tagnar_merchant/models/onboarding_details.dart';
 import 'package:tagnar_merchant/models/merchant.dart';
 
-const unverified = MerchantIdentity(
-  uid: 'alice',
-  name: 'Aarav Shah',
-  email: 'aarav@example.test',
-);
 const verified = MerchantIdentity(
   uid: 'alice',
   name: 'Aarav Shah',
-  email: 'aarav@example.test',
+  email: '',
   verifiedPhone: '+919000000001',
 );
 const anchor = MerchantAnchor(
@@ -35,8 +30,6 @@ class FakeAuth implements MerchantAuthRepository {
   bool failCode = false;
   @override
   Stream<MerchantIdentity?> get identities => stream.stream;
-  @override
-  Future<void> signInWithGoogle() async => stream.add(unverified);
   @override
   Future<void> sendPhoneCode(
     String phone, {
@@ -88,6 +81,33 @@ class FakeAccess implements MerchantAccessRepository {
 }
 
 Future<void> tick() => Future<void>.delayed(Duration.zero);
+
+Future<void> selectLocation(
+  WidgetTester tester,
+  String label,
+  String value,
+) async {
+  final dropdown = find.widgetWithText(DropdownButtonFormField<String>, label);
+  await tester.ensureVisible(dropdown);
+  DropdownButtonFormField<String>? field;
+  for (var attempt = 0; attempt < 30; attempt++) {
+    field = tester.widget<DropdownButtonFormField<String>>(dropdown);
+    if (field.onChanged != null) break;
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tester.pump();
+  }
+  final enabledField = field!;
+  expect(
+    enabledField.onChanged,
+    isNotNull,
+    reason: '$label dropdown is disabled.',
+  );
+  enabledField.onChanged!(value);
+  await tester.pump();
+}
+
 void main() {
   late FakeAuth auth;
   late FakeAccess access;
@@ -103,27 +123,24 @@ void main() {
     await access.stream.close();
   });
 
-  test(
-    'Google sign-in saves the profile but never opens merchant access',
-    () async {
-      auth.stream.add(unverified);
-      await tick();
-      expect(controller.identity!.hasVerifiedPhone, isFalse);
-      expect(access.profiles, 1);
-      await controller.sendCode('+919000000001');
-      await controller.verifyCode('654321');
-      await tick();
-      expect(controller.identity!.uid, 'alice');
-      expect(access.profiles, 2);
-    },
-  );
+  test('phone verification signs in and creates the profile', () async {
+    auth.stream.add(null);
+    await tick();
+    expect(controller.identity, isNull);
+    expect(access.profiles, 0);
+    await controller.sendCode('+919000000001');
+    await controller.verifyCode('654321');
+    await tick();
+    expect(controller.identity!.uid, 'alice');
+    expect(access.profiles, 1);
+  });
   test('demo code is not treated as a real SMS code and retry works', () async {
-    auth.stream.add(unverified);
+    auth.stream.add(null);
     await tick();
     await controller.sendCode('+919000000001');
     await controller.verifyCode('123456');
     expect(controller.error, contains('incorrect'));
-    expect(controller.identity!.hasVerifiedPhone, isFalse);
+    expect(controller.identity, isNull);
     await controller.verifyCode('654321');
     await tick();
     expect(controller.identity!.hasVerifiedPhone, isTrue);
@@ -131,7 +148,7 @@ void main() {
   test(
     'resend cooldown and stale callback after sign-out are guarded',
     () async {
-      auth.stream.add(unverified);
+      auth.stream.add(null);
       await tick();
       await controller.sendCode('+919000000001');
       final oldCallback = auth.callback!;
@@ -145,7 +162,7 @@ void main() {
     },
   );
   test('automatic SMS timeout still permits manual code entry', () async {
-    auth.stream.add(unverified);
+    auth.stream.add(null);
     await tick();
     await controller.sendCode('+919000000001');
     auth.callback!(const PhoneEvent(PhoneEventKind.autoRetrievalTimedOut));
@@ -227,79 +244,88 @@ void main() {
     expect(parsed.location, '18.461602, 73.881803');
   });
 
-  testWidgets(
-    'live UI requires Google, SMS and onboarding before anchor access',
-    (tester) async {
-      // This widget owns its own controller; the fixture controller remains idle.
-      await tester.pumpWidget(
-        GetMaterialApp(
-          theme: DashboardTheme.data,
-          home: MerchantAuthGate(auth: auth, access: access),
-        ),
-      );
-      auth.stream.add(null);
-      access.profileCompleted = false;
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Continue with Google'));
-      await tester.pumpAndSettle();
-      expect(find.text('Verify your phone'), findsOneWidget);
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Send SMS code'),
-            )
-            .onPressed,
-        isNull,
-      );
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Phone with country code'),
-        '+919000000001',
-      );
-      await tester.tap(find.byType(Checkbox));
-      await tester.pump();
-      await tester.tap(find.text('Send SMS code'));
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.widgetWithText(TextField, 'SMS code'),
-        '654321',
-      );
-      await tester.tap(find.text('Verify phone'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(find.text('Complete your merchant profile'), findsOneWidget);
-      for (final label in [
-        'Business name',
-        'Business address',
-        'GST number',
-        'City',
-        'State',
-        'Country',
-        'Postal code',
-      ]) {
-        final field = find.widgetWithText(TextFormField, label);
-        await tester.ensureVisible(field);
-        await tester.enterText(field, 'Valid value');
-      }
-      final businessType = find.byType(DropdownButtonFormField<BusinessType>);
-      await tester.ensureVisible(businessType);
-      await tester.tap(businessType);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Sole proprietorship').last);
-      await tester.pumpAndSettle();
-      final save = find.text('Save and continue');
-      await tester.scrollUntilVisible(
-        save,
-        200,
-        scrollable: find.byType(Scrollable).last,
-      );
-      await tester.tap(save);
-      await tester.pump();
-      access.stream.add(const AnchorAccessSnapshot([], serverConfirmed: true));
-      await tester.pumpAndSettle();
-      expect(find.text('No anchor linked to this merchant'), findsOneWidget);
-      expect(find.text('alice'), findsOneWidget);
-      expect(find.text('DEMO MODE · Sample data, saved locally'), findsNothing);
-      await tester.pumpWidget(const SizedBox());
-    },
-  );
+  testWidgets('live UI requires SMS and onboarding before anchor access', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    // This widget owns its own controller; the fixture controller remains idle.
+    await tester.pumpWidget(
+      GetMaterialApp(
+        theme: DashboardTheme.data,
+        home: MerchantAuthGate(auth: auth, access: access),
+      ),
+    );
+    auth.stream.add(null);
+    access.profileCompleted = false;
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome to your merchant workspace'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Send SMS code'),
+          )
+          .onPressed,
+      isNull,
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Phone with country code'),
+      '+919000000001',
+    );
+    tester.testTextInput.hide();
+    await tester.pump();
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
+    final sendCode = find.text('Send SMS code');
+    await tester.ensureVisible(sendCode);
+    await tester.tap(sendCode);
+    await tester.pumpAndSettle();
+    final smsCode = find.widgetWithText(TextField, 'SMS code');
+    await tester.ensureVisible(smsCode);
+    await tester.enterText(smsCode, '654321');
+    final verifyPhone = find.text('Verify phone');
+    await tester.ensureVisible(verifyPhone);
+    await tester.tap(verifyPhone);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('Complete your merchant profile'), findsOneWidget);
+    for (final label in [
+      'Business name',
+      'Business address',
+      'GST number',
+      'Postal code',
+    ]) {
+      final field = find.widgetWithText(TextFormField, label);
+      await tester.ensureVisible(field);
+      await tester.enterText(field, 'Valid value');
+    }
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    await selectLocation(tester, 'Country', 'India');
+    await selectLocation(tester, 'State', 'Maharashtra');
+    await selectLocation(tester, 'City', 'Amravati');
+    final businessType = find.byType(DropdownButtonFormField<BusinessType>);
+    await tester.ensureVisible(businessType);
+    await tester.tap(businessType);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sole proprietorship').last);
+    await tester.pumpAndSettle();
+    final save = find.text('Save and continue');
+    await tester.scrollUntilVisible(
+      save,
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(save);
+    await tester.pump();
+    access.stream.add(const AnchorAccessSnapshot([], serverConfirmed: true));
+    await tester.pumpAndSettle();
+    expect(find.text('No anchor linked to this merchant'), findsOneWidget);
+    expect(find.text('alice'), findsOneWidget);
+    expect(find.text('DEMO MODE · Sample data, saved locally'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
 }

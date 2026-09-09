@@ -33,10 +33,6 @@ class MerchantService {
       missingFields.add("Business Phone");
     }
 
-    if (merchant.businessEmail.trim().isEmpty) {
-      missingFields.add("Business Email");
-    }
-
     if (merchant.gstNumber.trim().isEmpty) {
       missingFields.add("GST Number");
     }

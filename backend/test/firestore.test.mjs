@@ -7,9 +7,9 @@ import {doc, setDoc, getDoc, getDocs, collection, query, where, updateDoc, serve
 let env;
 const projectId = 'demo-tagnar-merchant';
 const phone = '+919000000001';
-const verified = {phone_number: phone, email: 'merchant@example.test', firebase: {sign_in_provider: 'google.com', identities: {'google.com': ['google-uid']}}};
+const verified = {phone_number: phone, firebase: {sign_in_provider: 'phone', identities: {phone: [phone]}}};
 const dbFor = (uid, claims = verified) => env.authenticatedContext(uid, claims).firestore();
-const profile = (uid) => ({uid, name: 'Merchant', email: 'merchant@example.test', photoUrl: '', phoneNumber: phone, createdAt: serverTimestamp(), lastLogin: serverTimestamp(), updatedAt: serverTimestamp()});
+const profile = (uid) => ({uid, name: 'Merchant', email: '', photoUrl: '', phoneNumber: phone, createdAt: serverTimestamp(), lastLogin: serverTimestamp(), updatedAt: serverTimestamp()});
 const onboarding = {businessName: 'Corner Market', businessAddress: 'Baner Road, Pune', businessType: 'soleProprietorship', businessPhone: phone, businessEmail: 'anchor@example.test', gstNumber: '27ABCDE1234F1Z5', city: 'Pune', state: 'Maharashtra', country: 'India', postalCode: '411045', onboardingCompleted: true, updatedAt: serverTimestamp()};
 
 async function seed(path, value) {
@@ -27,17 +27,16 @@ beforeEach(async () => {
   await seed('anchor/anchor-a', {merchantId: 'alice', prefabName: 'Building', latitude: 18.4616, longitude: 73.8818});
 });
 
-test('Google login creates its own base merchant profile', async () => {
-  const googleOnly = {...verified}; delete googleOnly.phone_number;
-  const base = profile('new-user'); delete base.phoneNumber;
-  await assertSucceeds(setDoc(doc(dbFor('new-user', googleOnly), 'merchants_new/new-user'), base));
-  await assertFails(setDoc(doc(dbFor('new-user', googleOnly), 'merchants_new/other'), base));
+test('phone login creates only its own base merchant profile', async () => {
+  const base = profile('new-user');
+  await assertSucceeds(setDoc(doc(dbFor('new-user'), 'merchants_new/new-user'), base));
+  await assertFails(setDoc(doc(dbFor('new-user'), 'merchants_new/other'), base));
 });
 
 test('only verified merchant can complete onboarding', async () => {
   await assertSucceeds(updateDoc(doc(dbFor('alice'), 'merchants_new/alice'), onboarding));
-  const googleOnly = {...verified}; delete googleOnly.phone_number;
-  await assertFails(updateDoc(doc(dbFor('alice', googleOnly), 'merchants_new/alice'), onboarding));
+  const unverified = {firebase: {sign_in_provider: 'phone', identities: {}}};
+  await assertFails(updateDoc(doc(dbFor('alice', unverified), 'merchants_new/alice'), onboarding));
 });
 
 test('merchant reads anchors by matching merchantId', async () => {

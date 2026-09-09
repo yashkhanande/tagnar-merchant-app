@@ -3,7 +3,7 @@
 ## Inspection and stage 1 plan
 
 The existing project is `tagnar_merchant`, using Flutter, GetX, Firebase Auth,
-Firestore, Google Sign-In, and navy dashboard widgets. Preserve the existing
+Firestore, phone authentication, and navy dashboard widgets. Preserve the existing
 controllers/services/authentication flow and reuse the dashboard theme/cards.
 The PDF's task 2 describes a Flutter merchant associated with one anchor; other
 roles, Unity, maps, and AR are outside this app's scope.

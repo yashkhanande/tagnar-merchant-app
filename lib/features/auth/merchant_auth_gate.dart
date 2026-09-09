@@ -50,10 +50,10 @@ class _MerchantAuthGateState extends State<MerchantAuthGate>
       if (c.starting) {
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
-      if (c.identity != null && c.loadingProfile) {
+      if (c.identity?.hasVerifiedPhone == true && c.loadingProfile) {
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
-      if (c.identity != null && !c.profileLoaded) {
+      if (c.identity?.hasVerifiedPhone == true && !c.profileLoaded) {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Tagnar Merchant'),
@@ -107,8 +107,7 @@ class _MerchantAuthGateState extends State<MerchantAuthGate>
               if (c.identity == null) ...[
                 const SectionTitle(
                   'Welcome to your merchant workspace',
-                  subtitle:
-                      'Sign in, verify your phone and connect your anchor.',
+                  subtitle: 'Sign in with your mobile number to continue.',
                 ),
                 const DashboardCard(
                   child: Column(
@@ -131,21 +130,14 @@ class _MerchantAuthGateState extends State<MerchantAuthGate>
                   ),
                 ),
                 const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: c.signingIn ? null : c.signIn,
-                  icon: const Icon(Icons.login),
-                  label: Text(
-                    c.signingIn ? 'Signing in…' : 'Continue with Google',
-                  ),
-                ),
-                if (c.signingIn) const LinearProgressIndicator(),
+                RealPhoneForm(controller: c),
                 const Notice(
                   'This is the Firebase-connected app. For sample data, run the separate demo entry point.',
                 ),
               ] else ...[
                 SectionTitle(
                   'Verify your phone',
-                  subtitle: 'Signed in as ${c.identity!.email}',
+                  subtitle: 'Confirm your mobile number to continue.',
                 ),
                 RealPhoneForm(key: ValueKey(c.identity!.uid), controller: c),
               ],
@@ -184,7 +176,7 @@ class _RealPhoneFormState extends State<RealPhoneForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Confirm your phone with an SMS code. Your Google account stays the same.',
+            'Enter your mobile number and confirm it with the SMS code.',
           ),
           const SizedBox(height: 20),
           TextField(
@@ -207,7 +199,7 @@ class _RealPhoneFormState extends State<RealPhoneForm> {
                 ? null
                 : (v) => setState(() => _consent = v ?? false),
             title: const Text(
-              'I agree to receive a verification SMS. Google processes and stores my phone number to help prevent spam and abuse.',
+              'I agree to receive an SMS for phone verification.',
               style: TextStyle(fontSize: 13),
             ),
           ),

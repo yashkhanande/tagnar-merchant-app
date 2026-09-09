@@ -17,24 +17,6 @@ class AuthController extends GetxController {
 
   var isLoading = false.obs;
 
-  Future<void> signInWithGoogle() async {
-    try {
-      isLoading.value = true;
-
-      final credential = await _authService.signInWithGoogle();
-
-      if (credential != null) {
-        await createUser();
-      } else {
-        Get.snackbar("Login Failed", "Google sign-in failed.");
-      }
-    } catch (e) {
-      Get.snackbar("Login Failed", e.toString());
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
   Future<void> createUser() async {
     isLoading.value = true;
     await _authService.createUser();
