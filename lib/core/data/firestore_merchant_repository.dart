@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../merchant_repository.dart';
@@ -8,6 +9,7 @@ import '../models.dart';
 class FirestoreMerchantRepository implements MerchantRepository {
   FirestoreMerchantRepository({
     required this.firestore,
+    required this.functions,
     required this.auth,
     required this.merchantId,
     required this.merchantName,
@@ -18,6 +20,7 @@ class FirestoreMerchantRepository implements MerchantRepository {
   });
 
   final FirebaseFirestore firestore;
+  final FirebaseFunctions functions;
   final FirebaseAuth auth;
   final String merchantId, merchantName, anchorId, anchorName, anchorLocation;
   final String phone;
@@ -125,33 +128,13 @@ class FirestoreMerchantRepository implements MerchantRepository {
   @override
   Future<void> respondToOffer(String offerId, OfferDecision decision) async {
     _checkSession();
-    final ref = firestore.collection('merchant_offers').doc(offerId);
     try {
-      await firestore
-          .runTransaction((transaction) async {
-            final snapshot = await transaction.get(ref);
-            final data = snapshot.data();
-            if (data == null ||
-                data['merchantId'] != merchantId ||
-                data['anchorId'] != anchorId) {
-              throw const MerchantException('Offer not found.');
-            }
-            if (data['decision'] != null) {
-              throw const MerchantException(
-                'This offer already has a saved response.',
-              );
-            }
-            final expiresAt = _date(data['expiresAt'], 'expiresAt');
-            if (!expiresAt.isAfter(DateTime.now())) {
-              throw const MerchantException('This offer has expired.');
-            }
-            transaction.update(ref, {
-              'decision': decision.name,
-              'decidedAt': FieldValue.serverTimestamp(),
-              'decidedBy': merchantId,
-            });
-          })
+      await functions
+          .httpsCallable('respondToOffer')
+          .call<void>({'offerId': offerId, 'decision': decision.name})
           .timeout(const Duration(seconds: 20));
+    } on FirebaseFunctionsException catch (e) {
+      throw MerchantException(_functionMessage(e));
     } on FirebaseException catch (e) {
       throw MerchantException(_firebaseMessage(e.code));
     }
@@ -164,25 +147,13 @@ class FirestoreMerchantRepository implements MerchantRepository {
     if (value.isEmpty || value.length > 1000) {
       throw const MerchantException('Enter a message of 1–1,000 characters.');
     }
-    final conversation = firestore
-        .collection('merchant_conversations')
-        .doc(conversationId);
     try {
-      final current = await conversation.get(
-        const GetOptions(source: Source.server),
-      );
-      final data = current.data();
-      if (data == null ||
-          data['merchantId'] != merchantId ||
-          data['anchorId'] != anchorId) {
-        throw const MerchantException('Conversation not found.');
-      }
-      await conversation.collection('messages').add({
-        'text': value,
-        'sentAt': FieldValue.serverTimestamp(),
-        'senderId': merchantId,
-        'fromMerchant': true,
-      });
+      await functions
+          .httpsCallable('sendMerchantMessage')
+          .call<void>({'conversationId': conversationId, 'text': value})
+          .timeout(const Duration(seconds: 20));
+    } on FirebaseFunctionsException catch (e) {
+      throw MerchantException(_functionMessage(e));
     } on FirebaseException catch (e) {
       throw MerchantException(_firebaseMessage(e.code));
     }
@@ -192,10 +163,12 @@ class FirestoreMerchantRepository implements MerchantRepository {
   Future<void> markConversationRead(String conversationId) async {
     _checkSession();
     try {
-      await firestore
-          .collection('merchant_conversations')
-          .doc(conversationId)
-          .update({'unread': 0, 'readAt': FieldValue.serverTimestamp()});
+      await functions
+          .httpsCallable('markConversationRead')
+          .call<void>({'conversationId': conversationId})
+          .timeout(const Duration(seconds: 20));
+    } on FirebaseFunctionsException catch (e) {
+      throw MerchantException(_functionMessage(e));
     } on FirebaseException catch (e) {
       throw MerchantException(_firebaseMessage(e.code));
     }
@@ -374,4 +347,18 @@ class FirestoreMerchantRepository implements MerchantRepository {
     'not-found' => 'The merchant database or record is not available.',
     _ => 'Could not load or save anchor data. Please try again.',
   };
+
+  static String _functionMessage(FirebaseFunctionsException error) =>
+      switch (error.code) {
+        'unauthenticated' => 'Your session expired. Sign in again.',
+        'permission-denied' =>
+          error.message ??
+              'You no longer have access to this merchant account.',
+        'not-found' => error.message ?? 'The requested record was not found.',
+        'already-exists' || 'failed-precondition' || 'invalid-argument' =>
+          error.message ?? 'This action is no longer available.',
+        'unavailable' || 'deadline-exceeded' =>
+          'The secure merchant service is unavailable. Please try again.',
+        _ => error.message ?? 'Could not complete this action.',
+      };
 }

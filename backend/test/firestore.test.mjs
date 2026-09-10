@@ -2,7 +2,7 @@ import {before, after, beforeEach, test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {initializeTestEnvironment, assertFails, assertSucceeds} from '@firebase/rules-unit-testing';
-import {doc, setDoc, getDoc, getDocs, collection, query, where, updateDoc, serverTimestamp} from 'firebase/firestore';
+import {doc, setDoc, getDoc, getDocs, collection, query, where, updateDoc, addDoc, serverTimestamp} from 'firebase/firestore';
 
 let env;
 const projectId = 'demo-tagnar-merchant';
@@ -22,21 +22,18 @@ before(async () => {
 after(async () => env?.cleanup());
 beforeEach(async () => {
   await env.clearFirestore();
-  await assertSucceeds(setDoc(doc(dbFor('alice'), 'merchants_new/alice'), profile('alice')));
-  await assertSucceeds(setDoc(doc(dbFor('bob'), 'merchants_new/bob'), profile('bob')));
+  await seed('merchants_new/alice', profile('alice'));
+  await seed('merchants_new/bob', profile('bob'));
   await seed('anchor/anchor-a', {merchantId: 'alice', prefabName: 'Building', latitude: 18.4616, longitude: 73.8818});
 });
 
-test('phone login creates only its own base merchant profile', async () => {
-  const base = profile('new-user');
-  await assertSucceeds(setDoc(doc(dbFor('new-user'), 'merchants_new/new-user'), base));
-  await assertFails(setDoc(doc(dbFor('new-user'), 'merchants_new/other'), base));
+test('merchant profiles are client read-only', async () => {
+  await assertFails(setDoc(doc(dbFor('alice'), 'merchants_new/new-user'), profile('new-user')));
+  await assertFails(updateDoc(doc(dbFor('alice'), 'merchants_new/alice'), {name: 'Changed'}));
 });
 
-test('only verified merchant can complete onboarding', async () => {
-  await assertSucceeds(updateDoc(doc(dbFor('alice'), 'merchants_new/alice'), onboarding));
-  const unverified = {firebase: {sign_in_provider: 'phone', identities: {}}};
-  await assertFails(updateDoc(doc(dbFor('alice', unverified), 'merchants_new/alice'), onboarding));
+test('onboarding updates must use the trusted function', async () => {
+  await assertFails(updateDoc(doc(dbFor('alice'), 'merchants_new/alice'), onboarding));
 });
 
 test('merchant reads anchors by matching merchantId', async () => {
@@ -55,6 +52,16 @@ test('operational records are scoped by merchantId and anchorId', async () => {
   await seed('merchant_requests/request-a', {merchantId: 'alice', anchorId: 'anchor-a'});
   await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'merchant_requests'), where('merchantId', '==', 'alice'), where('anchorId', '==', 'anchor-a'))));
   await assertFails(getDoc(doc(dbFor('bob'), 'merchant_requests/request-a')));
+});
+
+test('offer and chat writes must use trusted functions', async () => {
+  await seed('merchant_offers/offer-a', {merchantId: 'alice', anchorId: 'anchor-a', decision: null});
+  await seed('merchant_conversations/chat-a', {merchantId: 'alice', anchorId: 'anchor-a', unread: 2});
+  await assertFails(updateDoc(doc(dbFor('alice'), 'merchant_offers/offer-a'), {decision: 'accepted'}));
+  await assertFails(updateDoc(doc(dbFor('alice'), 'merchant_conversations/chat-a'), {unread: 0}));
+  await assertFails(addDoc(collection(dbFor('alice'), 'merchant_conversations/chat-a/messages'), {
+    text: 'tampered', senderId: 'alice', fromMerchant: true, sentAt: serverTimestamp(),
+  }));
 });
 
 test('brand requests support document-ID targets and all-anchor scope', async () => {

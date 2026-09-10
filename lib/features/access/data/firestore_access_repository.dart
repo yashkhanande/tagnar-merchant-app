@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../auth/auth_repository.dart';
 import '../access_repository.dart';
@@ -7,9 +8,11 @@ import '../../../models/onboarding_details.dart';
 class FirestoreMerchantAccessRepository implements MerchantAccessRepository {
   FirestoreMerchantAccessRepository({
     required this.firestore,
+    required this.functions,
     required this.auth,
   });
   final FirebaseFirestore firestore;
+  final FirebaseFunctions functions;
   final FirebaseAuth auth;
 
   void _checkSession(String uid) {
@@ -25,31 +28,21 @@ class FirestoreMerchantAccessRepository implements MerchantAccessRepository {
     }
     try {
       final ref = firestore.collection('merchants_new').doc(identity.uid);
-      final data = await firestore
-          .runTransaction((transaction) async {
-            final current = await transaction.get(ref);
-            if (auth.currentUser?.uid != identity.uid) {
-              throw const AccessFailure('Your sign-in session changed.');
-            }
-            final fields = <String, dynamic>{
-              'uid': identity.uid,
-              'name': identity.name,
-              'email': identity.email,
-              'photoUrl': identity.photoUrl,
-              if (identity.verifiedPhone != null)
-                'phoneNumber': identity.verifiedPhone,
-              'lastLogin': FieldValue.serverTimestamp(),
-              'updatedAt': FieldValue.serverTimestamp(),
-              if (!current.exists) 'createdAt': FieldValue.serverTimestamp(),
-            };
-            transaction.set(ref, fields, SetOptions(merge: true));
-            return {...?current.data(), ...fields};
-          })
+      await functions
+          .httpsCallable('ensureMerchantProfile')
+          .call<void>()
           .timeout(const Duration(seconds: 20));
+      final snapshot = await ref.get(const GetOptions(source: Source.server));
+      final data = snapshot.data();
+      if (data == null) {
+        throw const AccessFailure('Could not create your merchant profile.');
+      }
       return MerchantProfile(
         onboardingCompleted: data['onboardingCompleted'] == true,
         details: OnboardingDetails.fromMap(data),
       );
+    } on FirebaseFunctionsException catch (e) {
+      throw AccessFailure(_functionMessage(e));
     } on FirebaseException catch (e) {
       throw AccessFailure(accessMessage(e.code));
     }
@@ -59,14 +52,12 @@ class FirestoreMerchantAccessRepository implements MerchantAccessRepository {
   Future<void> saveOnboarding(String uid, OnboardingDetails details) async {
     _checkSession(uid);
     try {
-      await firestore
-          .collection('merchants_new')
-          .doc(uid)
-          .set({
-            ...details.toMap(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true))
+      await functions
+          .httpsCallable('updateMerchantProfile')
+          .call<void>(details.toMap())
           .timeout(const Duration(seconds: 20));
+    } on FirebaseFunctionsException catch (e) {
+      throw AccessFailure(_functionMessage(e));
     } on FirebaseException catch (e) {
       throw AccessFailure(accessMessage(e.code));
     }
@@ -105,6 +96,16 @@ class FirestoreMerchantAccessRepository implements MerchantAccessRepository {
         });
   }
 }
+
+String _functionMessage(FirebaseFunctionsException error) =>
+    switch (error.code) {
+      'unauthenticated' => 'Sign in and verify your phone to continue.',
+      'permission-denied' => error.message ?? 'Merchant access is unavailable.',
+      'invalid-argument' => error.message ?? 'Check your business details.',
+      'unavailable' || 'deadline-exceeded' =>
+        'The secure merchant service is unavailable. Please try again.',
+      _ => error.message ?? 'Could not save your merchant profile.',
+    };
 
 String accessMessage(String code) => switch (code) {
   'permission-denied' =>

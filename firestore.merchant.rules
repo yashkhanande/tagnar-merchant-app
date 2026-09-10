@@ -71,14 +71,8 @@ service cloud.firestore {
     match /merchants_new/{uid} {
       allow get: if master() || (phoneSignedIn() && request.auth.uid == uid);
       allow list: if master();
-      allow create: if phoneSignedIn() && request.auth.uid == uid && validInitialProfile(uid)
-        && request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'photoUrl', 'phoneNumber', 'createdAt', 'lastLogin', 'updatedAt']);
-      allow update: if phoneSignedIn() && request.auth.uid == uid
-        && validAuthProfile(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'photoUrl', 'phoneNumber', 'lastLogin', 'updatedAt']);
-      allow update: if ownMerchant(uid) && validOnboarding()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['businessName', 'businessAddress', 'businessType', 'businessPhone', 'businessEmail', 'gstNumber', 'city', 'state', 'country', 'postalCode', 'onboardingCompleted', 'updatedAt']);
-      allow delete: if false;
+      // Profile writes go through verified callable functions using Admin SDK.
+      allow create, update, delete: if false;
     }
     match /anchor/{anchorId} {
       allow read: if ownMerchant(resource.data.merchantId);
@@ -101,40 +95,21 @@ service cloud.firestore {
     }
     match /merchant_offers/{offerId} {
       allow read: if ownsAnchorData(resource.data);
-      allow update: if ownsAnchorData(resource.data)
-        && resource.data.get('decision', null) == null
-        && resource.data.expiresAt > request.time
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['decision', 'decidedAt', 'decidedBy'])
-        && request.resource.data.decision in ['accepted', 'declined']
-        && request.resource.data.decidedAt == request.time
-        && request.resource.data.decidedBy == request.auth.uid;
-      allow create, delete: if false;
+      // Offer responses go through respondToOffer.
+      allow create, update, delete: if false;
     }
     match /merchant_conversations/{conversationId} {
       allow read: if ownsAnchorData(resource.data);
-      allow update: if ownsAnchorData(resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['unread', 'readAt'])
-        && request.resource.data.unread == 0
-        && request.resource.data.readAt == request.time;
-      allow create, delete: if false;
+      // Read receipts go through markConversationRead.
+      allow create, update, delete: if false;
 
       match /messages/{messageId} {
         function conversation() {
           return get(/databases/$(database)/documents/merchant_conversations/$(conversationId));
         }
         allow read: if ownsAnchorData(conversation().data);
-        allow create: if ownsAnchorData(conversation().data)
-          && request.resource.data.keys().hasOnly(
-            ['text', 'sentAt', 'senderId', 'fromMerchant'])
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 1000
-          && request.resource.data.sentAt == request.time
-          && request.resource.data.senderId == request.auth.uid
-          && request.resource.data.fromMerchant == true;
-        allow update, delete: if false;
+        // Merchant messages go through sendMerchantMessage.
+        allow create, update, delete: if false;
       }
     }
     match /{document=**} { allow read, write: if false; }

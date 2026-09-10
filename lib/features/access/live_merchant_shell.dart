@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -26,6 +27,10 @@ class LiveMerchantShell extends StatelessWidget {
         repository: FirestoreMerchantRepository(
           firestore: FirebaseFirestore.instanceFor(
             app: FirebaseAuth.instance.app,
+          ),
+          functions: FirebaseFunctions.instanceFor(
+            app: FirebaseAuth.instance.app,
+            region: 'asia-south1',
           ),
           auth: FirebaseAuth.instance,
           merchantId: user.uid,

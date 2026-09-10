@@ -40,6 +40,7 @@ dependencies:
   firebase_core: ^4.14.0
   shared_preferences: 2.5.3
   country_state_city: ^0.1.6
+  cloud_functions: ^6.4.0
 
 dev_dependencies:
   flutter_test:

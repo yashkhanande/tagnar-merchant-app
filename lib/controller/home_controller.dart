@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -155,6 +156,10 @@ class HomeController extends GetxController {
                 merchantId: uid,
                 service: OnboardingService(
                   firestore: FirebaseFirestore.instance,
+                  functions: FirebaseFunctions.instanceFor(
+                    app: FirebaseAuth.instance.app,
+                    region: 'asia-south1',
+                  ),
                   auth: FirebaseAuth.instance,
                 ),
               ),

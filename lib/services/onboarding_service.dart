@@ -1,13 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/onboarding_details.dart';
 
 class OnboardingService {
   final FirebaseFirestore firestore;
+  final FirebaseFunctions functions;
   final FirebaseAuth auth;
 
-  OnboardingService({required this.firestore, required this.auth});
+  OnboardingService({
+    required this.firestore,
+    required this.functions,
+    required this.auth,
+  });
 
   DocumentReference<Map<String, dynamic>> _document(String uid) {
     if (auth.currentUser?.uid != uid) {
@@ -28,6 +34,9 @@ class OnboardingService {
   }
 
   Future<void> save(String uid, OnboardingDetails details) async {
-    await _document(uid).set(details.toMap(), SetOptions(merge: true));
+    _document(uid);
+    await functions
+        .httpsCallable('updateMerchantProfile')
+        .call<void>(details.toMap());
   }
 }
